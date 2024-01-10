@@ -1,10 +1,10 @@
-package MPWorking;
+package MP_;
 
 import battlecode.common.*;
-import MPWorking.Comms.*;
-import MPWorking.Debug.*;
-import MPWorking.fast.*;
-import MPWorking.Util.*;
+import MP_.Comms.*;
+import MP_.Debug.*;
+import MP_.fast.*;
+import MP_.Util.*;
 
 public class Duck extends Robot {
     static enum State {

@@ -4,7 +4,6 @@
 import sys
 import shutil, errno
 import os
-from pathlib import Path
 
 def copyanything(src, dst):
     try:
@@ -19,9 +18,6 @@ def usage():
 
 if __name__ == '__main__':
     num_args = len(sys.argv)
-
-    main_dir = Path(__file__).parent.parent
-
     if num_args != 2:
         usage()
         quit()
@@ -34,13 +30,13 @@ if __name__ == '__main__':
         quit()
 
     working_name = "MPWorking"
-    src_dir = main_dir / "src"
+    src_dir = "src"
 
-    working_src = src_dir / working_name
-    snapshot_dst = src_dir / snapshot_name
+    working_src = src_dir + "/" + working_name
+    snapshot_dst = src_dir + "/" + snapshot_name
 
-    debug_verbose_on = "final boolean VERBOSE = true;"
-    debug_verbose_off = "final boolean VERBOSE = false;"
+    debug_verbose_on = "static final boolean VERBOSE = true;"
+    debug_verbose_off = "static final boolean VERBOSE = false;"
 
     local_resign_off = "// localResign();"
     local_resign_on = "localResign();"
@@ -57,18 +53,8 @@ if __name__ == '__main__':
             # Replace the target string
             filedata = filedata.replace(working_name, snapshot_name)
             filedata = filedata.replace(debug_verbose_on, debug_verbose_off)
-            # filedata = filedata.replace(local_resign_off, local_resign_on)
+            filedata = filedata.replace(local_resign_off, local_resign_on)
 
             # Write the file out again
             with open(file_path, 'w') as new_file:
                 new_file.write(filedata)
-
-    with open('build.defaults', 'r') as file:
-        with open('build_defaults.tmp', 'w') as file2:
-            for line in file:
-                if 'package2' in line:
-                    file2.write(f"package2={snapshot_name}\n")
-                else:
-                    file2.write(line)
-
-    os.rename('build_defaults.tmp', 'build.defaults')
