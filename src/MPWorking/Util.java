@@ -429,7 +429,7 @@ public class Util {
     }
 
     static int getValidSymmetries() throws GameActionException {
-        return Comms.readSymmetryAll() & MapTracker.validSymmetries;
+        return Comms.readSymmetryAll();
     }
 
     static MapLocation getClosestLoc(MapLocation[] locs) throws GameActionException {

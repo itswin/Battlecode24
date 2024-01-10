@@ -11,6 +11,9 @@ public class MapTracker {
 
     static class TileType {
         public static final int UNKNOWN = 0;
+        public static final int EMPTY = 1;
+        public static final int WALL = 2;
+        public static final int SPAWN_ZONE = 3;
     }
 
     public static int validSymmetries = Util.SymmetryType.ALL;
@@ -22,7 +25,7 @@ public class MapTracker {
     static boolean initialized = false;
     static int initRow = 0;
     static final int INIT_BC_LEFT = 1000;
-    static final int BFS_BC_LEFT = 3000;
+    static final int BFS_BC_LEFT = 4000;
     static final int VISITED_BC_LEFT = 2000;
 
     static final int MAX_OBSTACLES = 100;
@@ -32,7 +35,7 @@ public class MapTracker {
 
     static FastQueue<Obstacle> obstaclesToProcess;
 
-    static int id = 12316;
+    static int id = 10735;
 
     public static class Obstacle {
         // If devs make an obstacle that is bigger than this... Oh well...
@@ -468,22 +471,14 @@ public class MapTracker {
 
     // @pre canSenseLocation(loc)
     public static void fillTileType(MapLocation loc) throws GameActionException {
-        // TODO
-        // if (rc.senseCloud(loc)) {
-        // tileType[loc.x][loc.y] = TileType.CLOUD;
-        // } else if (!rc.sensePassability(loc)) {
-        // tileType[loc.x][loc.y] = TileType.WALL;
-        // } else if (rc.senseWell(loc) != null) {
-        // tileType[loc.x][loc.y] = TileType.WELL;
-        // } else {
-        // RobotInfo robot = rc.senseRobotAtLocation(loc);
-        // if (robot != null && robot.type == RobotType.HEADQUARTERS) {
-        // tileType[loc.x][loc.y] = robot.team == Robot.team ? TileType.FRIENDLY_HQ :
-        // TileType.ENEMY_HQ;
-        // } else {
-        // tileType[loc.x][loc.y] = TileType.EMPTY;
-        // }
-        // }
+        MapInfo info = rc.senseMapInfo(loc);
+        if (info.isWall()) {
+            tileType[loc.x][loc.y] = TileType.WALL;
+        } else if (info.isSpawnZone()) {
+            tileType[loc.x][loc.y] = TileType.SPAWN_ZONE;
+        } else {
+            tileType[loc.x][loc.y] = TileType.EMPTY;
+        }
     }
 
     public static void invalidateSymmetries(MapLocation loc) throws GameActionException {
@@ -499,95 +494,68 @@ public class MapTracker {
                 break;
         }
 
-        // TODO
+        Debug.println("Valid symmetries: " + validSymmetries, id);
+
         int otherTileType;
-        // if ((validSymmetries & Util.SymmetryType.HORIZONTAL) != 0) {
-        // otherTileType = tileType[Util.MAP_WIDTH - loc.x - 1][loc.y];
-        // switch (otherTileType) {
-        // case TileType.UNKNOWN:
-        // break;
-        // case TileType.WALL:
-        // case TileType.CLOUD:
-        // case TileType.WELL:
-        // case TileType.EMPTY:
-        // if (otherTileType != tileType[loc.x][loc.y]) {
-        // validSymmetries &= ~Util.SymmetryType.HORIZONTAL;
-        // }
-        // break;
-        // case TileType.FRIENDLY_HQ:
-        // if (tileType[loc.x][loc.y] != TileType.ENEMY_HQ) {
-        // validSymmetries &= ~Util.SymmetryType.HORIZONTAL;
-        // }
-        // break;
-        // case TileType.ENEMY_HQ:
-        // if (tileType[loc.x][loc.y] != TileType.FRIENDLY_HQ) {
-        // validSymmetries &= ~Util.SymmetryType.HORIZONTAL;
-        // }
-        // break;
-        // default:
-        // Debug.println("Invalid tile type: " + otherTileType, id);
-        // break;
-        // }
-        // }
+        if ((validSymmetries & Util.SymmetryType.HORIZONTAL) != 0) {
+            otherTileType = tileType[Util.MAP_WIDTH - loc.x - 1][loc.y];
+            switch (otherTileType) {
+                case TileType.UNKNOWN:
+                    break;
+                case TileType.EMPTY:
+                case TileType.WALL:
+                case TileType.SPAWN_ZONE:
+                    if (otherTileType != tileType[loc.x][loc.y]) {
+                        validSymmetries &= ~Util.SymmetryType.HORIZONTAL;
+                        Debug.println("Invalidated horizontal symmetry");
+                        Comms.writeSymmetryAll(validSymmetries);
+                    }
+                    break;
+                default:
+                    Debug.println("Invalid tile type: " + otherTileType, id);
+                    break;
+            }
+        }
 
-        // if ((validSymmetries & Util.SymmetryType.VERTICAL) != 0) {
-        // otherTileType = tileType[loc.x][Util.MAP_HEIGHT - loc.y - 1];
-        // switch (otherTileType) {
-        // case TileType.UNKNOWN:
-        // break;
-        // case TileType.WALL:
-        // case TileType.CLOUD:
-        // case TileType.WELL:
-        // case TileType.EMPTY:
-        // if (otherTileType != tileType[loc.x][loc.y]) {
-        // validSymmetries &= ~Util.SymmetryType.VERTICAL;
-        // }
-        // break;
-        // case TileType.FRIENDLY_HQ:
-        // if (tileType[loc.x][loc.y] != TileType.ENEMY_HQ) {
-        // validSymmetries &= ~Util.SymmetryType.VERTICAL;
-        // }
-        // break;
-        // case TileType.ENEMY_HQ:
-        // if (tileType[loc.x][loc.y] != TileType.FRIENDLY_HQ) {
-        // validSymmetries &= ~Util.SymmetryType.VERTICAL;
-        // }
-        // break;
-        // default:
-        // Debug.println("Invalid tile type: " + otherTileType, id);
-        // break;
-        // }
-        // }
+        if ((validSymmetries & Util.SymmetryType.VERTICAL) != 0) {
+            otherTileType = tileType[loc.x][Util.MAP_HEIGHT - loc.y - 1];
+            switch (otherTileType) {
+                case TileType.UNKNOWN:
+                    break;
+                case TileType.EMPTY:
+                case TileType.WALL:
+                case TileType.SPAWN_ZONE:
+                    if (otherTileType != tileType[loc.x][loc.y]) {
+                        validSymmetries &= ~Util.SymmetryType.VERTICAL;
+                        Debug.println("Invalidated vertical symmetry");
+                        Comms.writeSymmetryAll(validSymmetries);
+                    }
+                    break;
+                default:
+                    Debug.println("Invalid tile type: " + otherTileType, id);
+                    break;
+            }
+        }
 
-        // if ((validSymmetries & Util.SymmetryType.ROTATIONAL) != 0) {
-        // otherTileType = tileType[Util.MAP_WIDTH - loc.x - 1][Util.MAP_HEIGHT - loc.y
-        // - 1];
-        // switch (otherTileType) {
-        // case TileType.UNKNOWN:
-        // break;
-        // case TileType.WALL:
-        // case TileType.CLOUD:
-        // case TileType.WELL:
-        // case TileType.EMPTY:
-        // if (otherTileType != tileType[loc.x][loc.y]) {
-        // validSymmetries &= ~Util.SymmetryType.ROTATIONAL;
-        // }
-        // break;
-        // case TileType.FRIENDLY_HQ:
-        // if (tileType[loc.x][loc.y] != TileType.ENEMY_HQ) {
-        // validSymmetries &= ~Util.SymmetryType.ROTATIONAL;
-        // }
-        // break;
-        // case TileType.ENEMY_HQ:
-        // if (tileType[loc.x][loc.y] != TileType.FRIENDLY_HQ) {
-        // validSymmetries &= ~Util.SymmetryType.ROTATIONAL;
-        // }
-        // break;
-        // default:
-        // Debug.println("Invalid tile type: " + otherTileType, id);
-        // break;
-        // }
-        // }
+        if ((validSymmetries & Util.SymmetryType.ROTATIONAL) != 0) {
+            otherTileType = tileType[Util.MAP_WIDTH - loc.x - 1][Util.MAP_HEIGHT - loc.y - 1];
+            switch (otherTileType) {
+                case TileType.UNKNOWN:
+                    break;
+                case TileType.EMPTY:
+                case TileType.WALL:
+                case TileType.SPAWN_ZONE:
+                    if (otherTileType != tileType[loc.x][loc.y]) {
+                        validSymmetries &= ~Util.SymmetryType.ROTATIONAL;
+                        Debug.println("Invalidated rotational symmetry");
+                        Comms.writeSymmetryAll(validSymmetries);
+                    }
+                    break;
+                default:
+                    Debug.println("Invalid tile type: " + otherTileType, id);
+                    break;
+            }
+        }
     }
 
     static void markSeen() throws GameActionException {

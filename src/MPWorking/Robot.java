@@ -216,7 +216,6 @@ public class Robot {
         MapTracker.initialize();
         flushSectorDatabase();
         MapTracker.markSeen();
-        updateSymmetry();
     }
 
     /*
@@ -1357,95 +1356,6 @@ public class Robot {
             }
         }
         return bestLoc;
-    }
-
-    public void invalidateSymmetries() throws GameActionException {
-        // Loop through the currently valid enemy HQ locs and invalidate them if
-        // possible
-        // MapLocation possibleHQ;
-        // for (int i = enemySpawnLocs.length; --i >= 0;) {
-        // possibleHQ = enemySpawnLocs[i];
-        // if (rc.canSenseLocation(possibleHQ)) {
-        // RobotInfo robot = rc.senseRobotAtLocation(possibleHQ);
-        // if (robot != null && robot.getType() == RobotType.HEADQUARTERS &&
-        // robot.getTeam() != rc.getTeam())
-        // continue;
-        // tryRemoveSymmetry(possibleHQ);
-        // }
-        // }
-
-        // MapLocation[] emptyLocs = emptySymLocs.getKeys();
-        // for (int i = emptyLocs.length; --i >= 0;) {
-        // if (tryRemoveSymmetry(emptyLocs[i])) {
-        // emptySymLocs.remove(emptyLocs[i]);
-        // }
-        // }
-    }
-
-    public boolean tryRemoveSymmetry(MapLocation loc) throws GameActionException {
-        if (rc.canWriteSharedArray(0, 0)) {
-            removeSymmetry(loc);
-            return true;
-        } else {
-            emptySymLocs.add(loc);
-            return false;
-        }
-    }
-
-    public void removeSymmetry(MapLocation loc) throws GameActionException {
-        int symmetry = getSymmetry(loc);
-        switch (symmetry) {
-            case Util.SymmetryType.VERTICAL:
-                if (Comms.readSymmetryVertical() == 0)
-                    return;
-                Debug.println("Invalidating vertical: " + loc);
-                Comms.writeSymmetryVertical(0);
-                break;
-            case Util.SymmetryType.HORIZONTAL:
-                if (Comms.readSymmetryHorizontal() == 0)
-                    return;
-                Debug.println("Invalidating horizontal: " + loc);
-                Comms.writeSymmetryHorizontal(0);
-                break;
-            case Util.SymmetryType.ROTATIONAL:
-                if (Comms.readSymmetryRotational() == 0)
-                    return;
-                Debug.println("Invalidating rotational: " + loc);
-                Comms.writeSymmetryRotational(0);
-                break;
-            default:
-                break;
-        }
-    }
-
-    // Get the symmetry type that this location resulted from
-    public int getSymmetry(MapLocation loc) throws GameActionException {
-        for (int i = 0; i < spawnLocations.length; i++) {
-            MapLocation hqLoc = spawnLocations[i];
-            if (!rc.onTheMap(hqLoc))
-                continue;
-
-            MapLocation verticalFlip = new MapLocation(hqLoc.x, Util.MAP_HEIGHT - hqLoc.y - 1);
-            MapLocation horizontalFlip = new MapLocation(Util.MAP_WIDTH - hqLoc.x - 1, hqLoc.y);
-            MapLocation rotation = new MapLocation(Util.MAP_WIDTH - hqLoc.x - 1, Util.MAP_HEIGHT - hqLoc.y - 1);
-            if (loc.equals(verticalFlip)) {
-                return Util.SymmetryType.VERTICAL;
-            } else if (loc.equals(horizontalFlip)) {
-                return Util.SymmetryType.HORIZONTAL;
-            } else if (loc.equals(rotation)) {
-                return Util.SymmetryType.ROTATIONAL;
-            }
-        }
-        return -1;
-    }
-
-    public void updateSymmetry() throws GameActionException {
-        int commsSymmetry = Comms.readSymmetryAll();
-        int localSymmetry = Util.getValidSymmetries();
-        if (commsSymmetry != localSymmetry && rc.canWriteSharedArray(0, 0)) {
-            Comms.writeSymmetryAll(localSymmetry);
-            Debug.println("Updating symmetry: " + localSymmetry);
-        }
     }
 
     public MapLocation getCombatSector() throws GameActionException {

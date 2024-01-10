@@ -8,7 +8,6 @@ public class Comms {
 
     private static int[] bufferPool;
     private static boolean[] dirtyFlags;
-
     // CONSTS
 
     // ControlStatus priorities are in increasing priority.
@@ -38,11 +37,16 @@ public class Comms {
 
     public final static int UNDEFINED_SECTOR_INDEX = 127;
 
-    public static void init(RobotController r) {
+    public static void init(RobotController r) throws GameActionException {
         rc = r;
 
         bufferPool = new int[64];
         dirtyFlags = new boolean[64];
+
+        if (rc.getRoundNum() == 1) {
+            initPrioritySectors();
+            initSymmetry();
+        }
     }
 
     public static MapLocation readOurBreadLocation(int idx) throws GameActionException {
