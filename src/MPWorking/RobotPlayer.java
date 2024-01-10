@@ -15,6 +15,7 @@ import MPWorking.Debug.*;
 public strictfp class RobotPlayer {
 
     static Robot bot;
+    static RobotController rc;
 
     /**
      * run() is the method that is called when a robot is instantiated in the
@@ -37,6 +38,8 @@ public strictfp class RobotPlayer {
         Pathfinding.init(rc);
         Nav.init(rc);
         FastSort.init(rc);
+        MicroDuck.init(rc);
+        RobotPlayer.rc = rc;
 
         // You can also use indicators to save debug notes in replays.
         bot = new Duck(rc);
@@ -44,10 +47,10 @@ public strictfp class RobotPlayer {
             try {
                 bot.initTurn();
                 bot.takeTurn();
-
                 bot.endTurn();
                 Debug.flush();
                 Clock.yield();
+                localResign();
             } catch (Exception e) {
                 System.out.println("Exception. Round num: " + rc.getRoundNum());
                 e.printStackTrace();
@@ -69,4 +72,9 @@ public strictfp class RobotPlayer {
         rc.resign();
     }
 
+    public static void localResign() throws GameActionException {
+        if (rc.getRoundNum() > 500) {
+            rc.resign();
+        }
+    }
 }

@@ -25,7 +25,7 @@ public class Duck extends Robot {
             return false;
         }
 
-        closestEnemy = getBestEnemy(EnemySensable);
+        closestEnemy = getBestEnemy(enemies);
         loadExploreTarget();
 
         trySwitchState();
@@ -51,6 +51,10 @@ public class Duck extends Robot {
     }
 
     public void doStateAction() throws GameActionException {
+        // If capturing flag, do not allow movement in micro
+        if (MicroDuck.doMicro(currState != State.CAPTURING_FLAG))
+            return;
+
         switch (currState) {
             case EXPLORING:
                 doExplore();

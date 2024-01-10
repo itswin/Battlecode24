@@ -18,9 +18,9 @@ public class Robot {
     static int homeIdx;
     static MapLocation home;
     static MapLocation[] spawnLocations;
-    static RobotInfo[] EnemySensable;
-    static RobotInfo[] EnemyAttackable;
-    static RobotInfo[] FriendlySensable;
+    static RobotInfo[] enemies;
+    static RobotInfo[] attackableEnemies;
+    static RobotInfo[] allies;
     static MapLocation currLoc;
 
     static int symmetryAll;
@@ -159,6 +159,7 @@ public class Robot {
 
     public boolean takeTurn() throws GameActionException {
         turnCount += 1;
+        buyUpgrades();
 
         if (!rc.isSpawned()) {
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
@@ -181,8 +182,8 @@ public class Robot {
         }
 
         roundNum = rc.getRoundNum();
-        EnemySensable = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
-        FriendlySensable = rc.senseNearbyRobots(-1, rc.getTeam());
+        enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
+        allies = rc.senseNearbyRobots(-1, rc.getTeam());
         currLoc = rc.getLocation();
         Debug.setIndicatorDot(Debug.INDICATORS, home, 0, 255, 0);
         setSectorStates();
@@ -197,6 +198,18 @@ public class Robot {
         }
 
         return true;
+    }
+
+    public void buyUpgrades() throws GameActionException {
+        int upgradeRound = rc.getRoundNum() % GameConstants.GLOBAL_UPGRADE_ROUNDS;
+        if (upgradeRound > 1)
+            return;
+
+        if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) {
+            rc.buyGlobal(GlobalUpgrade.ACTION);
+        } else if (rc.canBuyGlobal(GlobalUpgrade.HEALING)) {
+            rc.buyGlobal(GlobalUpgrade.HEALING);
+        }
     }
 
     public void endTurn() throws GameActionException {
@@ -892,9 +905,9 @@ public class Robot {
     public void setSectorControlStates() throws GameActionException {
         // Mark nearby sectors with enemies as hostile
         // Process at max 10 enemies
-        int numEnemies = Math.min(EnemySensable.length, 10);
+        int numEnemies = Math.min(enemies.length, 10);
         for (int i = 0; i < numEnemies; i++) {
-            RobotInfo enemy = EnemySensable[i];
+            RobotInfo enemy = enemies[i];
             int sectorIdx = whichXLoc[enemy.location.x] + whichYLoc[enemy.location.y];
 
             int controlStatus = Comms.ControlStatus.ENEMY;
@@ -1620,8 +1633,8 @@ public class Robot {
                 enemiesInAction = 0;
                 enemiesInVision = 0;
                 avgEnemyDist = 0;
-                for (int i = EnemyAttackable.length; --i >= 0;) {
-                    enemy = EnemyAttackable[i];
+                for (int i = attackableEnemies.length; --i >= 0;) {
+                    enemy = attackableEnemies[i];
                     enemyLoc = enemy.getLocation();
                     if (enemyLoc.distanceSquaredTo(targetLoc) <= actionRadiusSquared) {
                         enemiesInAction++;
@@ -1631,7 +1644,7 @@ public class Robot {
                     }
                     avgEnemyDist += enemyLoc.distanceSquaredTo(targetLoc);
                 }
-                avgEnemyDist /= EnemyAttackable.length;
+                avgEnemyDist /= attackableEnemies.length;
                 if (!isPassible) {
                     continue;
                 }
@@ -1676,18 +1689,18 @@ public class Robot {
                 if (bestAvgFriendDist == Double.MAX_VALUE) {
                     avgFriendDist = 0;
                     MapLocation bestLoc = currLoc.add(bestDirSoFar);
-                    for (int i = FriendlySensable.length; --i >= 0;) {
-                        avgFriendDist += FriendlySensable[i].getLocation().distanceSquaredTo(bestLoc);
+                    for (int i = allies.length; --i >= 0;) {
+                        avgFriendDist += allies[i].getLocation().distanceSquaredTo(bestLoc);
                     }
-                    avgFriendDist /= FriendlySensable.length;
+                    avgFriendDist /= allies.length;
                     bestAvgFriendDist = avgFriendDist;
                 }
 
                 avgFriendDist = 0;
-                for (int i = FriendlySensable.length; --i >= 0;) {
-                    avgFriendDist += FriendlySensable[i].getLocation().distanceSquaredTo(targetLoc);
+                for (int i = allies.length; --i >= 0;) {
+                    avgFriendDist += allies[i].getLocation().distanceSquaredTo(targetLoc);
                 }
-                avgFriendDist /= FriendlySensable.length;
+                avgFriendDist /= allies.length;
                 if (avgFriendDist < bestAvgFriendDist) {
                     bestDirSoFar = newDir;
                     bestAvgFriendDist = avgFriendDist;

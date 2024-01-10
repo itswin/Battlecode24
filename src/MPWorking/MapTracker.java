@@ -15,9 +15,7 @@ public class MapTracker {
 
     public static int validSymmetries = Util.SymmetryType.ALL;
 
-    static final int MAX_MAP_SIZE = 60;
-    static final int MAX_MAP_SIZE_SQ = MAX_MAP_SIZE * MAX_MAP_SIZE;
-    static final int MAX_MAP_SIZE2 = 2 * MAX_MAP_SIZE;
+    static final int MAX_MAP_SIZE = GameConstants.MAP_MAX_HEIGHT;
     static int[][] tileType = new int[MAX_MAP_SIZE][];
 
     static int visionRadius;
@@ -25,7 +23,7 @@ public class MapTracker {
     static int initRow = 0;
     static final int INIT_BC_LEFT = 1000;
     static final int BFS_BC_LEFT = 3000;
-    static final int VISITED_BC_LEFT = 1000;
+    static final int VISITED_BC_LEFT = 2000;
 
     static final int MAX_OBSTACLES = 100;
     static int[][] obstacleIdx = new int[MAX_MAP_SIZE][];
@@ -387,6 +385,16 @@ public class MapTracker {
         // Debug.println("Adding obstacle at " + loc, id);
 
         if (rc.sensePassability(loc)) {
+            obstacleIdx[x][y] = -1;
+            return;
+        }
+
+        MapInfo info = rc.senseMapInfo(loc);
+        if (info.isWater()) {
+            obstacleIdx[x][y] = -1;
+            return;
+        } else if (!info.isWall()) {
+            // If it's not a wall or water and is not passable, it's the dam.
             obstacleIdx[x][y] = -1;
             return;
         }

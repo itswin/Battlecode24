@@ -40,6 +40,8 @@ if __name__ == '__main__':
 
     local_resign_off = "// localResign();"
     local_resign_on = "localResign();"
+    resign_on = "rc.resign();"
+    resign_off = "// rc.resign();"
 
     copyanything(working_src, snapshot_dst)
 
@@ -54,6 +56,7 @@ if __name__ == '__main__':
             filedata = filedata.replace(working_name, snapshot_name)
             filedata = filedata.replace(debug_verbose_on, debug_verbose_off)
             filedata = filedata.replace(local_resign_off, local_resign_on)
+            filedata = filedata.replace(resign_off, resign_on)
 
             # Write the file out again
             with open(file_path, 'w') as new_file:
