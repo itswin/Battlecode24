@@ -11,6 +11,7 @@ public class Duck extends Robot {
         SETUP,
         EXPLORING,
         CAPTURING_FLAG,
+        WAITING,
     };
 
     MapLocation target;
@@ -45,13 +46,21 @@ public class Duck extends Robot {
             case SETUP:
                 if (rc.getRoundNum() > GameConstants.SETUP_ROUNDS)
                     currState = State.EXPLORING;
+                break;
             case EXPLORING:
-                if (enemyFlagLoc != null) {
+                if (shouldWait()) {
+                    currState = State.WAITING;
+                } else if (enemyFlagLoc != null) {
                     currState = State.CAPTURING_FLAG;
                 }
                 break;
             case CAPTURING_FLAG:
                 if (enemyFlagLoc == null && !rc.hasFlag()) {
+                    currState = State.EXPLORING;
+                }
+                break;
+            case WAITING:
+                if (!shouldWait()) {
                     currState = State.EXPLORING;
                 }
                 break;
@@ -71,6 +80,7 @@ public class Duck extends Robot {
                     loadExploreTarget2();
                 }
 
+                fillWater();
                 doExplore();
                 placeTrapNearDam();
                 break;
@@ -82,7 +92,54 @@ public class Duck extends Robot {
             case CAPTURING_FLAG:
                 doCapture();
                 break;
+            case WAITING:
+                fillWater();
+                formHull();
+                break;
         }
+    }
+
+    public void fillWater() throws GameActionException {
+        if (!rc.isActionReady())
+            return;
+
+        MapInfo[] mapInfos = rc.senseNearbyMapInfos(rc.getLocation(), GameConstants.INTERACT_RADIUS_SQUARED);
+        for (MapInfo info : mapInfos) {
+            if (info.isWater() && rc.canFill(info.getMapLocation())) {
+                rc.fill(info.getMapLocation());
+                return;
+            }
+        }
+    }
+
+    public boolean shouldWait() {
+        boolean tooSoon = turnSawLastClosestAttackingEnemy + WAITING_TIMEOUT >= rc.getRoundNum();
+        return tooSoon || !rc.isActionReady();
+    }
+
+    public void formHull() throws GameActionException {
+        if (lastClosestEnemy == null)
+            return;
+
+        // We want to form a hull around the last closest attacking enemy
+        // To do this, we pref to move to the location closest to the loc which
+        // is NOT in vision radius of the location
+        int bestDist = Integer.MAX_VALUE;
+        Direction bestDir = Direction.CENTER;
+        MapLocation loc;
+        int dist;
+        for (Direction dir : Util.directions) {
+            loc = lastClosestEnemy.add(dir);
+            dist = currLoc.distanceSquaredTo(loc);
+            if (loc.isWithinDistanceSquared(lastClosestEnemy, visionRadiusSquared))
+                continue;
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestDir = dir;
+            }
+        }
+
+        Nav.move(currLoc.add(bestDir), true);
     }
 
     public void loadEnemyFlagTarget() throws GameActionException {
@@ -144,6 +201,27 @@ public class Duck extends Robot {
         Comms.writeEnemyFlagAll(numEnemyFlags - 1, Comms.OFF_THE_MAP_LOC);
     }
 
+    public TrapType pickTrapType(MapLocation loc) throws GameActionException {
+        if (rc.getCrumbs() < TrapType.STUN.buildCost)
+            return null;
+        if (rc.getCrumbs() < TrapType.EXPLOSIVE.buildCost)
+            return TrapType.STUN;
+
+        if (FastMath.rand256() % 3 == 0)
+            return TrapType.EXPLOSIVE;
+        else
+            return TrapType.STUN;
+    }
+
+    public boolean isAdjacentToTrap(MapLocation loc) throws GameActionException {
+        MapInfo[] adjacentLocs = rc.senseNearbyMapInfos(loc, 2);
+        for (MapInfo info : adjacentLocs) {
+            if (info.getTrapType() != TrapType.NONE)
+                return true;
+        }
+        return false;
+    }
+
     public void placeTrapNearDam() throws GameActionException {
         if (!rc.isActionReady())
             return;
@@ -154,8 +232,9 @@ public class Duck extends Robot {
             if (Util.isDamLoc(info)) {
                 for (Direction dir : Util.directions) {
                     locCandidate = info.getMapLocation().add(dir);
-                    if (rc.canBuild(TrapType.EXPLOSIVE, locCandidate)) {
-                        rc.build(TrapType.EXPLOSIVE, locCandidate);
+                    TrapType trapType = pickTrapType(locCandidate);
+                    if (trapType != null && rc.canBuild(trapType, locCandidate) && !isAdjacentToTrap(locCandidate)) {
+                        rc.build(trapType, locCandidate);
                         return;
                     }
                 }
@@ -166,8 +245,10 @@ public class Duck extends Robot {
     public void placeRandomTrap() throws GameActionException {
         // Rarely attempt placing traps
         MapLocation prevLoc = rc.getLocation();
-        if (rc.canBuild(TrapType.EXPLOSIVE, prevLoc) && FastMath.nextInt(256) % 37 == 1)
-            rc.build(TrapType.EXPLOSIVE, prevLoc);
+        TrapType trapType = pickTrapType(prevLoc);
+        if (trapType != null && rc.canBuild(trapType, prevLoc) && FastMath.nextInt(256) % 37 == 1
+                && !isAdjacentToTrap(prevLoc))
+            rc.build(trapType, prevLoc);
     }
 
     public void doExplore() throws GameActionException {

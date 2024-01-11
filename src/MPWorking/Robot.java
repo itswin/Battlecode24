@@ -168,6 +168,11 @@ public class Robot {
                     spawned = true;
                     Explore.assignExplore3Dir(Explore.EXPLORE_DIRECTIONS[unitNum % Explore.EXPLORE_DIRECTIONS.length]);
                     writeFlagLocs();
+
+                    // for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(rc.getLocation(), -1)) {
+                    //     Debug.println("Loc: " + loc + ". " + rc.canBuild(TrapType.STUN, loc));
+                    // }
+                    // rc.resign();
                 }
             } else {
                 return false;
@@ -409,10 +414,6 @@ public class Robot {
     }
 
     public void buyUpgrades() throws GameActionException {
-        int upgradeRound = rc.getRoundNum() % GameConstants.GLOBAL_UPGRADE_ROUNDS;
-        if (upgradeRound > 1)
-            return;
-
         if (rc.canBuyGlobal(GlobalUpgrade.ACTION)) {
             rc.buyGlobal(GlobalUpgrade.ACTION);
         } else if (rc.canBuyGlobal(GlobalUpgrade.HEALING)) {

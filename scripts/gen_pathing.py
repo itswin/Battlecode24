@@ -7,8 +7,15 @@ from math import *
 def encode(x, y):
     return (x+7) + 15*(y+7)
 
-RADII = {'32': 32, '20': 20, '10': 10}
-SMALLER_RADII = {'32': 20, '20': 10, '10': 5}
+"""
+    static String n = "\00\01\02";
+
+    static boolean isIn2(Direction dir) {
+        return n.indexOf(dir.ordinal()) != -1;
+    }
+"""
+RADII = {'20': 20, '10': 10}
+SMALLER_RADII = {'20': 10, '10': 5}
 
 DIRECTIONS = {
     (1, 0): 'EAST',
@@ -20,52 +27,6 @@ DIRECTIONS = {
     (1, -1): 'SOUTHEAST',
     (-1, -1): 'SOUTHWEST',
 }
-
-# Max val of 5
-def binary_search(indent, strVal, val_dict):
-    return f"""
-if ({strVal} >= 0) {{
-    if ({strVal} >= 3) {{
-        if ({strVal} == 3) {{
-            {val_dict[3]}
-        }} else if ({strVal} == 4) {{
-            {val_dict[4]}
-        }} else {{
-            {val_dict[5]}
-        }}
-    }} else {{
-        if ({strVal} == 0) {{
-            {val_dict[0]}
-        }} else if ({strVal} == 1) {{
-            {val_dict[1]}
-        }} else {{
-            {val_dict[2]}
-        }}
-    }}
-}} else {{
-    if ({strVal} >= -2) {{
-        if ({strVal} == -1) {{
-            {val_dict[-1]}
-        }} else {{
-            {val_dict[-2]}
-        }}
-    }} else {{
-        if ({strVal} == -3) {{
-            {val_dict[-3]}
-        }} else if ({strVal} == -4) {{
-            {val_dict[-4]}
-        }} else {{
-            {val_dict[-5]}
-        }}
-    }}
-}}
-"""
-
-
-def min_chain(vals):
-    if len(vals) == 1:
-        return vals[0]
-    return f"Math.min({vals[0]}, {min_chain(vals[1:])})"
 
 def opposite(dir):
     if dir == 'EAST':
@@ -84,7 +45,7 @@ def opposite(dir):
         return 'NORTHWEST'
     if dir == 'SOUTHWEST':
         return 'NORTHEAST'
-    return 'ZERO'
+    return 'CENTER'
 
 def direction_to(dx, dy):
     if (abs(dx) >= 2.414 * abs(dy)):
@@ -93,7 +54,7 @@ def direction_to(dx, dy):
         elif (dx < 0):
             return "WEST"
         else:
-            return "ZERO"
+            return "CENTER"
     elif (abs(dy) >= 2.414 * abs(dx)):
         if (dy > 0):
             return "NORTH"
@@ -120,10 +81,10 @@ def gen_constants(radius):
         for y in range(-7, 8):
             if dist(x, y) <= radius:
                 out += f"""
-    Location l{encode(x,y)}; // location representing relative coordinate ({x}, {y})
-    double d{encode(x,y)}; // shortest distance to location from current location
-    // Direction dir{encode(x,y)}; // best direction to take now to optimally get to location
-    double score{encode(x,y)}; // heuristic distance from location to target
+    static MapLocation l{encode(x,y)}; // location representing relative coordinate ({x}, {y})
+    static double d{encode(x,y)}; // shortest distance to location from current location
+    // static Direction dir{encode(x,y)}; // best direction to take now to optimally get to location
+    static double score{encode(x,y)}; // heuristic distance from location to target
 """
     return out
 
@@ -138,7 +99,7 @@ def gen_init(radius):
     out = f"""
         l{encode(0,0)} = rc.getLocation();
         d{encode(0,0)} = 0;
-        // dir{encode(0,0)} = ZERO;
+        // dir{encode(0,0)} = CENTER;
 """
     for r2 in range(1, radius+1):
         for x in range(-7, 8):
@@ -160,58 +121,62 @@ def gen_bfs(radius):
             for y in range(-7, 8):
                 if dist(x, y) == r2:
                     out += f"""
-        // check ({x}, {y})"""
+        if (rc.onTheMap(l{encode(x,y)})) {{ // check ({x}, {y})"""
                     indent = ""
                     out += f"""
-        if (rc.canSenseLocation(l{encode(x,y)}) && 
-                (mapObj = rc.senseObjectAtLocation(l{encode(x,y)}, true)) != MapObject.WATER &&
-                mapObj != MapObject.BALL) {{ """
+            if (rc.canSenseLocation(l{encode(x,y)}) && rc.sensePassability(l{encode(x,y)})) {{ """
                     indent = "    "
                     dxdy = [(dx, dy) for dx in range(-1, 2) for dy in range(-1, 2) if (dx, dy) != (0, 0) and dist(x+dx,y+dy) <= radius]
                     dxdy = sorted(dxdy, key=lambda dd: dist(x+dd[0], y+dd[1]))
-                    vals = []
                     for dx, dy in dxdy:
                         if encode(x+dx, y+dy) in visited:
-                            vals.append(str([1/16, 5/16, 2/16, 6/16, 3/16, 7/16, 4/16, 8/16][(round(atan2(-dy,-dx)/pi*4)+8)%8] + (0 if dx * dy == 0 else 4)) if (x+dx,y+dy) == (0, 0) else f'd{encode(x+dx,y+dy)}{"" if dx * dy == 0 else f" + 4"}')
+                            out += f"""
+            {indent}if (d{encode(x,y)} > d{encode(x+dx,y+dy)}) {{ // from ({x+dx}, {y+dy})
+                {indent}d{encode(x,y)} = {str([5/16, 1/16, 6/16, 2/16, 7/16, 3/16, 8/16, 4/16][(round(atan2(-dy,-dx)/pi*4)+8)%8]) if (x+dx,y+dy) == (0, 0) else f'd{encode(x+dx,y+dy)}'};
+            {indent}}}"""
                     out += f"""
-        {indent}d{encode(x,y)} = 10 + {min_chain(vals)};"""
+            {indent}d{encode(x,y)} += 1;"""
                     out += f"""
-        }}"""
+            }}"""
                     visited.add(encode(x,y))
-                    out += "\n"
+                    out += f"""
+        }}
+"""
     return out
 
 def gen_selection(radius, smaller_radius):
-    out = f"""        if (target.distanceSquared(l{encode(0,0)}) <= {radius}) {{
-            int target_dx = target.x - l{encode(0,0)}.x;
-            int target_dy = target.y - l{encode(0,0)}.y;"""
-    val_dict_x = {}
+    out = f"""
+        int target_dx = target.x - l{encode(0,0)}.x;
+        int target_dy = target.y - l{encode(0,0)}.y;
+        switch (target_dx) {{"""
     for tdx in range(-7, 8):
         if tdx**2 <= radius:
-            val_dict_y = {}
+            out += f"""
+                case {tdx}:
+                    switch (target_dy) {{"""
             for tdy in range(-7, 8):
                 if dist(tdx, tdy) <= radius:
-                    val_dict_y[tdy] = f"return direction(d{encode(tdx, tdy)}); // destination is at relative location ({tdx}, {tdy})"
-                else:
-                    val_dict_y[tdy] = f"""rc.println("BFS: Invalid loc"); return null;"""
-            val_dict_x[tdx] = binary_search("                ", "target_dy", val_dict_y)
-        else:
-            val_dict_x[tdx] = f"""rc.println("BFS: Invalid loc"); return null;"""
-    
-    out += binary_search("            ", "target_dx", val_dict_x)
-
+                    out += f"""
+                        case {tdy}:
+                            return direction(d{encode(tdx, tdy)}); // destination is at relative location ({tdx}, {tdy})"""
+                            # if (dir{encode(tdx, tdy)} != null)
+                            #     return dir{encode(tdx, tdy)}; // destination is at relative location ({tdx}, {tdy})
+                            # break;"""
+            out += f"""
+                    }}
+                    break;"""
     out += f"""
         }}
         
         ans = Double.POSITIVE_INFINITY;
         bestScore = 0;
-        currDist = Math.sqrt(l{encode(0,0)}.distanceSquared(target));
+        currDist = Math.sqrt(l{encode(0,0)}.distanceSquaredTo(target));
         """
     for x in range(-7, 8):
         for y in range(-7, 8):
             if smaller_radius < dist(x, y) <= radius: # on the edge of the radius radius
                 out += f"""
-        score{encode(x,y)} = (currDist - Math.sqrt(l{encode(x,y)}.distanceSquared(target))) / d{encode(x,y)};
+        score{encode(x,y)} = (currDist - Math.sqrt(l{encode(x,y)}.distanceSquaredTo(target))) / d{encode(x,y)};
         if (score{encode(x,y)} > bestScore) {{
             bestScore = score{encode(x,y)};
             ans = d{encode(x,y)};
@@ -221,11 +186,11 @@ def gen_selection(radius, smaller_radius):
 
 def gen_print(radius):
     out = f"""
-        // rc.println("LOCAL DISTANCES:");"""
+        // System.out.println("LOCAL DISTANCES:");"""
     for y in range(7, -8, -1):
         if y**2 <= radius:
             out += f"""
-        // rc.println("""
+        // System.out.println("""
             for x in range(-7, 8):
                 if dist(x, y) <= radius:
                     out += f""""\\t" + d{encode(x,y)} + """
@@ -233,11 +198,11 @@ def gen_print(radius):
                     out += f""""\\t" + """
             out = out[:-3] + """);"""
     out += f"""
-        // rc.println("DIRECTIONS:");"""
+        // System.out.println("DIRECTIONS:");"""
     for y in range(7, -8, -1):
         if y**2 <= radius:
             out += f"""
-        // rc.println("""
+        // System.out.println("""
             for x in range(-7, 8):
                 if dist(x, y) <= radius:
                     out += f""""\\t" + dir{encode(x,y)} + """
@@ -257,76 +222,57 @@ import battlecode.common.*;
 
 public class BFS{rad} {{
 
-    public RobotController rc;
+    public static RobotController rc;
 {gen_constants(radius)}
 
-    public BFS{rad}(RobotController r) {{
+    public static void init(RobotController r) {{
         rc = r;
+        team = rc.getTeam();
     }}
 
-    public final Direction NORTH = Direction.NORTH;
-    public final Direction NORTHEAST = Direction.NORTHEAST;
-    public final Direction EAST = Direction.EAST;
-    public final Direction SOUTHEAST = Direction.SOUTHEAST;
-    public final Direction SOUTH = Direction.SOUTH;
-    public final Direction SOUTHWEST = Direction.SOUTHWEST;
-    public final Direction WEST = Direction.WEST;
-    public final Direction NORTHWEST = Direction.NORTHWEST;
-    public final Direction ZERO = Direction.ZERO;
+    private static final Direction[] DIRECTIONS = new Direction[] {{null, Direction.NORTHEAST, Direction.NORTHWEST, Direction.SOUTHWEST, Direction.SOUTHEAST, Direction.EAST, Direction.NORTH, Direction.WEST, Direction.SOUTH}};
 
-    private final Direction[] DIRECTIONS = new Direction[] {{null, EAST, NORTH, WEST, SOUTH, NORTHEAST, NORTHWEST, SOUTHWEST, SOUTHEAST}};
+    public final static Direction NORTH = Direction.NORTH;
+    public final static Direction NORTHEAST = Direction.NORTHEAST;
+    public final static Direction EAST = Direction.EAST;
+    public final static Direction SOUTHEAST = Direction.SOUTHEAST;
+    public final static Direction SOUTH = Direction.SOUTH;
+    public final static Direction SOUTHWEST = Direction.SOUTHWEST;
+    public final static Direction WEST = Direction.WEST;
+    public final static Direction NORTHWEST = Direction.NORTHWEST;
+    public final static Direction CENTER = Direction.CENTER;
 
-    public double ans;
-    public double bestScore;
-    public double currDist;
-    public MapObject mapObj;
-    public boolean hasCalced = false;
+    public static MapInfo mapInfo;
+    public static Direction currentDir;
+    public static Team team;
+    public static double ans;
+    public static double bestScore;
+    public static double currDist;
 
-    public Direction direction(double dist) {{
+    public static Direction direction(double dist) {{
         if (dist==Double.POSITIVE_INFINITY) {{
             return null;
         }}
         return DIRECTIONS[(int)(dist * 16 % 16)];
     }}
 
-    public void init() {{
-        hasCalced = false;
-    }}
-
-    public Direction bestDir(Location target) {{
-        if (hasCalced) {{
-            return dirTo(target);
-        }}
-
-        hasCalced = true;
+    public static Direction bestDir(MapLocation target) throws GameActionException {{
 {gen_init(radius)}
 {gen_bfs(radius)}
 {gen_print(radius)}
-
-        return dirTo(target);
-    }}
-
-    private Direction dirTo(Location target) {{
 {gen_selection(radius, smaller_radius)}
+        
         return direction(ans);
-    }}
-
-    public boolean existsPathTo(Location target) {{
-        if (!hasCalced) {{
-            return bestDir(target) != null;
-        }}
-
-        return dirTo(target) != null;
     }}
 }}
 """)
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        for rad in ["32", "20", "10"]:
+        for rad in ["20", "10"]:
             gen_full("MPWorking", rad)
     elif len(sys.argv) == 2:
-        for rad in ["32", "20", "10"]:
+        for rad in ["20", "10"]:
             gen_full(sys.argv[1], rad)
     else:
         gen_full(sys.argv[1], sys.argv[2])

@@ -50,7 +50,7 @@ public strictfp class RobotPlayer {
                 bot.endTurn();
                 Debug.flush();
                 Clock.yield();
-                localResign();
+                // localResign();
             } catch (Exception e) {
                 System.out.println("Exception. Round num: " + rc.getRoundNum());
                 e.printStackTrace();
