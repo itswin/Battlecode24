@@ -59,9 +59,8 @@ public class Duck extends Robot {
     }
 
     public void doStateAction() throws GameActionException {
-        // If capturing flag, do not allow movement in micro
         // Do not do micro in setup
-        if (currState != State.SETUP && MicroDuck.doMicro(currState != State.CAPTURING_FLAG))
+        if (currState != State.SETUP && MicroDuck.doMicro())
             return;
 
         switch (currState) {

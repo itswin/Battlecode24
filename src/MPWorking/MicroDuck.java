@@ -8,6 +8,7 @@ public class MicroDuck {
     static final float ACTION_RANGE = GameConstants.ATTACK_RADIUS_SQUARED;
     static final float VISION_RANGE = GameConstants.VISION_RADIUS_SQUARED;
     static final int ACTION_RANGE_EXTENDED = 10;
+    static final int OVERWHELMING_RATIO = 3;
 
     static final Direction[] dirs = {
             Direction.NORTH,
@@ -25,6 +26,8 @@ public class MicroDuck {
 
     static RobotController rc;
 
+    static int id = 14026;
+
     static void init(RobotController r) {
         rc = r;
     }
@@ -37,6 +40,7 @@ public class MicroDuck {
     static MapLocation currentLoc;
     static RobotInfo currentUnit;
     static int numDucks;
+    static boolean overwhelming;
 
     static float DAMAGE;
     static float HEAL;
@@ -83,6 +87,11 @@ public class MicroDuck {
 
         currentActionRadius = ACTION_RANGE;
         currentExtendedActionRadius = ACTION_RANGE_EXTENDED;
+
+        overwhelming = Robot.enemies.length * OVERWHELMING_RATIO <= Robot.allies.length;
+        if (overwhelming) {
+            Debug.printString("OVERWHELMING");
+        }
 
         boolean isThreatened = true;
         i = units.length;
@@ -174,6 +183,13 @@ public class MicroDuck {
 
     // @returns true if we moved
     static boolean apply(MicroInfo bestMicro) throws GameActionException {
+        // Debug.println("BestMicro Dir: " + bestMicro.dir + " " + bestMicro.location +
+        // " " + bestMicro.minDistanceToEnemy
+        // + " " + bestMicro.enemyDamageScore + " " + bestMicro.allyHealScore + " " +
+        // bestMicro.ducksAttackRange
+        // + " " + bestMicro.possibleEnemyDucks + " " + bestMicro.minDistToAlly + " " +
+        // bestMicro.canMove + " "
+        // + bestMicro.isSupported, id);
         if (bestMicro.dir == Direction.CENTER) {
             // Attacking should have actually happened on the previous check,
             // but I put it here just in case.
@@ -191,7 +207,7 @@ public class MicroDuck {
     }
 
     static boolean applyAttack(MicroInfo bestMicro) throws GameActionException {
-        if (bestMicro.enemyTarget != null) {
+        if (bestMicro.enemyTarget != null && bestMicro.enemyDamageScore >= bestMicro.allyHealScore) {
             if (rc.canAttack(bestMicro.enemyTarget)) {
                 rc.attack(bestMicro.enemyTarget);
                 return true;
@@ -272,7 +288,7 @@ public class MicroDuck {
             if (dist <= ACTION_RANGE && canAttack) {
                 // Calculate score based on percent healed over current health
                 float healScore = HEAL / currentUnit.getHealth();
-                if (currentUnit.getHealth() <= 2 * DAMAGE)
+                if (currentUnit.getHealth() <= DAMAGE)
                     healScore += 2;
                 if (healScore > allyHealScore) {
                     allyHealScore = healScore;
@@ -304,25 +320,30 @@ public class MicroDuck {
             if (allyHealScore < M.allyHealScore)
                 return false;
 
-            if (ducksAttackRange < M.ducksAttackRange)
-                return true;
-            if (ducksAttackRange > M.ducksAttackRange)
-                return false;
+            if (!overwhelming) {
+                if (ducksAttackRange < M.ducksAttackRange)
+                    return true;
+                if (ducksAttackRange > M.ducksAttackRange)
+                    return false;
 
-            if (possibleEnemyDucks < M.possibleEnemyDucks)
-                return true;
-            if (possibleEnemyDucks > M.possibleEnemyDucks)
-                return false;
+                if (possibleEnemyDucks < M.possibleEnemyDucks)
+                    return true;
+                if (possibleEnemyDucks > M.possibleEnemyDucks)
+                    return false;
 
-            if (minDistToAlly < M.minDistToAlly)
-                return true;
-            if (minDistToAlly > M.minDistToAlly)
-                return false;
+                if (minDistToAlly < M.minDistToAlly)
+                    return true;
+                if (minDistToAlly > M.minDistToAlly)
+                    return false;
 
-            if (inRange())
-                return minDistanceToEnemy >= M.minDistanceToEnemy;
-            else
+                if (inRange())
+                    return minDistanceToEnemy >= M.minDistanceToEnemy;
+                else
+                    return minDistanceToEnemy <= M.minDistanceToEnemy;
+            } else {
+                // Go closer if we have a unit majority
                 return minDistanceToEnemy <= M.minDistanceToEnemy;
+            }
         }
 
         boolean isBetterAttack(MicroInfo M) {
