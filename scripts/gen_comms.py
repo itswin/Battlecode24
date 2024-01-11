@@ -7,7 +7,7 @@ import sys
 # https://github.com/mvpatel2000/Battlecode2022/blob/main/scripts/generate_comms_handler.py
 
 SCHEMA = {
-    'our_bread': {
+    'our_flag': {
         'slots': 3,
         'bits': {
             'x_coord': 6,
@@ -15,6 +15,13 @@ SCHEMA = {
         }
     },
     'our_spawn': {
+        'slots': 3,
+        'bits': {
+            'x_coord': 6,
+            'y_coord': 6,
+        }
+    },
+    'enemy_flag': {
         'slots': 3,
         'bits': {
             'x_coord': 6,

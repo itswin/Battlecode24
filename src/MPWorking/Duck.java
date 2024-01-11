@@ -26,7 +26,7 @@ public class Duck extends Robot {
         }
 
         closestEnemy = getBestEnemy(enemies);
-        loadExploreTarget();
+        loadExploreTarget2();
 
         trySwitchState();
         Debug.printString("S: " + currState);

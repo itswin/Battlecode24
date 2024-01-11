@@ -56,9 +56,7 @@ public class Robot {
     static boolean exploreMode;
 
     static FastLocSet seenSymmetricLocs;
-    static int HQwaitCounter;
     static boolean goingToSymLoc;
-    static boolean isSymLocHQ;
     static MapLocation exploreTarget;
 
     static int turnsFollowedExploreTarget = 0;
@@ -72,20 +70,22 @@ public class Robot {
     // static int numCloseFriendlies;
     // static int numEnemies;
     // static MapLocation closestAttackingEnemy;
-    // static MapLocation lastClosestAttackingEnemy;
-    // static int turnSawLastClosestAttackingEnemy;
+    static MapLocation lastClosestEnemy;
+    static int turnSawLastClosestAttackingEnemy;
     // static int enemyAttackingHealth;
     // static int lastEnemyAttackingHealth;
     // static int friendlyAttackingHealth;
     // static int numEnemyLaunchersAttackingUs;
-    // public static final int LAST_ATTACKING_ENEMY_TIMEOUT = 2;
-    // public static final int WAITING_TIMEOUT = 4;
+    public static final int LAST_ATTACKING_ENEMY_TIMEOUT = 2;
+    public static final int WAITING_TIMEOUT = 4;
 
     static FastLocSet emptySymLocs;
 
     static final int MIN_BC_TO_FLUSH_SECTOR_DB = 1500;
     static final int BC_TO_WRITE_SECTOR = 150;
     static final int MIN_BC_TO_FLUSH = 1200;
+
+    static FastIntIntMap combatSectorToTurnWritten;
 
     public Robot(RobotController r) throws GameActionException {
         rc = r;
@@ -132,17 +132,10 @@ public class Robot {
 
         symmetryChanged = false;
         emptySymLocs = new FastLocSet();
-    }
-
-    public void loadSpawnLocations() throws GameActionException {
-        MapLocation[] listOfSpawns = new MapLocation[] {
-                Comms.readOurSpawnLocation(0),
-                Comms.readOurSpawnLocation(1),
-                Comms.readOurSpawnLocation(2),
-        };
-
-        spawnLocations = new MapLocation[3];
-        System.arraycopy(listOfSpawns, 0, spawnLocations, 0, 3);
+        turnSawLastClosestAttackingEnemy = -50;
+        combatSectorToTurnWritten = new FastIntIntMap();
+        seenSymmetricLocs = new FastLocSet();
+        spawnLocations = null;
     }
 
     public void initTurn() throws GameActionException {
@@ -159,8 +152,6 @@ public class Robot {
 
     public boolean takeTurn() throws GameActionException {
         turnCount += 1;
-        buyUpgrades();
-
         if (!rc.isSpawned()) {
             MapLocation[] spawnLocs = rc.getAllySpawnLocations();
             // Pick a random spawn location to attempt spawning in.
@@ -173,13 +164,18 @@ public class Robot {
                     int lastUnitNum = Comms.readUnitNum();
                     unitNum = lastUnitNum + 1;
                     Comms.writeUnitNum(unitNum);
+                    Debug.println("I am unit number: " + unitNum);
                     spawned = true;
                     Explore.assignExplore3Dir(Explore.EXPLORE_DIRECTIONS[unitNum % Explore.EXPLORE_DIRECTIONS.length]);
+                    writeFlagLocs();
                 }
             } else {
                 return false;
             }
         }
+
+        doUnitNumSpecificTasks();
+        loadSpawnLocations();
 
         roundNum = rc.getRoundNum();
         enemies = rc.senseNearbyRobots(-1, rc.getTeam().opponent());
@@ -187,6 +183,7 @@ public class Robot {
         currLoc = rc.getLocation();
         Debug.setIndicatorDot(Debug.INDICATORS, home, 0, 255, 0);
         setSectorStates();
+        resetLocalEnemyInformation();
 
         // Must recalculate
         int currSymmetryAll = Util.getValidSymmetries();
@@ -198,6 +195,217 @@ public class Robot {
         }
 
         return true;
+    }
+
+    public void doUnitNumSpecificTasks() throws GameActionException {
+        doUnitOneTasks();
+        clearOldEnemyInfo();
+        setPrioritySectors();
+    }
+
+    public void doUnitOneTasks() throws GameActionException {
+        if (unitNum != 1)
+            return;
+        buyUpgrades();
+        setInitialExploreSectors();
+        Comms.initComms();
+        displayCombatSectors();
+    }
+
+    /**
+     * Sets initial explore sectors to center and symmetry locs
+     */
+    public void setInitialExploreSectors() throws GameActionException {
+        if (rc.getRoundNum() != 2)
+            return;
+
+        int exploreSectorIndex = getNextEmptyExploreSectorIdx(0);
+
+        // Add the center and the all the symmetry locations
+        MapLocation center = new MapLocation(Util.MAP_WIDTH / 2, Util.MAP_HEIGHT / 2);
+        int[] sectors = new int[enemySpawnLocs.length + 1];
+        sectors[0] = whichSector(center);
+        for (int i = 0; i < enemySpawnLocs.length; i++)
+            sectors[i + 1] = whichSector(enemySpawnLocs[i]);
+
+        for (int i = 0; i < enemySpawnLocs.length + 1; i++) {
+            int sector = sectors[i];
+            int controlStatus = Comms.readSectorControlStatus(sector);
+
+            if (exploreSectorIndex < Comms.EXPLORE_SECTOR_SLOTS
+                    && controlStatus == Comms.ControlStatus.UNKNOWN) {
+                Comms.writeExploreSectorIndex(exploreSectorIndex, sector);
+                Comms.writeExploreSectorClaimStatus(exploreSectorIndex, Comms.ClaimStatus.UNCLAIMED);
+                Comms.writeSectorControlStatus(sector, Comms.ControlStatus.EXPLORING);
+                // Debug.println("Added explore sector: " + sectorCenters[sector] + " at index:
+                // " + exploreSectorIndex);
+                exploreSectorIndex = getNextEmptyExploreSectorIdx(exploreSectorIndex + 1);
+            }
+        }
+    }
+
+    /**
+     * Clears old ENEMY_PASSIVE or ENEMY_AGGRESIVE information from sectors
+     * every Util.CLEAR_ENEMY_INFO_PERIOD rounds
+     */
+    public void clearOldEnemyInfo() throws GameActionException {
+        // Ducks 2-4 clear old enemy info
+        if (unitNum == 1 || unitNum > 4)
+            return;
+
+        for (int sectorIdx = rc.getRoundNum()
+                % Util.CLEAR_ENEMY_INFO_PERIOD; sectorIdx < numSectors; sectorIdx += Util.CLEAR_ENEMY_INFO_PERIOD) {
+            int controlStatus = Comms.readSectorControlStatus(sectorIdx);
+            if (controlStatus == Comms.ControlStatus.ENEMY) {
+                // Mark old combat sectors as need to be explored.
+                Debug.println("Clearing enemy info sector at : " + sectorCenters[sectorIdx]);
+                Comms.writeSectorControlStatus(sectorIdx, Comms.ControlStatus.EXPLORING);
+            }
+        }
+
+        // Clear old combat sectors if they have no enemy info
+        int[] combatSectorsWritten = combatSectorToTurnWritten.getKeys();
+        for (int combatSectorIdx : combatSectorsWritten) {
+            int turn = combatSectorToTurnWritten.getVal(combatSectorIdx);
+            int sectorIdx = Comms.readCombatSectorIndex(combatSectorIdx);
+            if (Comms.isEnemyControlStatus(Comms.readSectorControlStatus(sectorIdx))) {
+                combatSectorToTurnWritten.addReplace(combatSectorIdx, rc.getRoundNum());
+            } else if (turn + Util.ENEMY_INFO_STALE_TIMEOUT < rc.getRoundNum()) {
+                Comms.writeCombatSectorIndex(combatSectorIdx, Comms.UNDEFINED_SECTOR_INDEX);
+                combatSectorToTurnWritten.remove(combatSectorIdx);
+                Debug.println("Clearing combat sector at : " +
+                        sectorCenters[combatSectorIdx]);
+            }
+        }
+    }
+
+    /**
+     * Sets the priority sectors list
+     * 
+     * @throws GameActionException
+     */
+    public void setPrioritySectors() throws GameActionException {
+        // Sectors aren't initialized until round 2
+        if (rc.getRoundNum() == 1)
+            return;
+
+        // Ducks 2-4 set priority sectors
+        if (unitNum == 1 || unitNum > 4) {
+            return;
+        }
+
+        int combatSectorIndex = getNextEmptyCombatSectorIdx(0);
+        int exploreSectorIndex = getNextEmptyExploreSectorIdx(0);
+
+        // Alternate sweeping each half of the sectors every turn
+        int mode = (unitNum + rc.getRoundNum()) % 3;
+        int startIdx = 0;
+        int endIdx = 0;
+        switch (mode) {
+            case 0:
+                startIdx = 0;
+                endIdx = numSectors / 3;
+                break;
+            case 1:
+                startIdx = numSectors / 3;
+                endIdx = numSectors * 2 / 3;
+                break;
+            case 2:
+                startIdx = numSectors * 2 / 3;
+                endIdx = numSectors;
+                break;
+            default:
+                Debug.println("[Error] Unexpected case in setPriorityQueue!");
+        }
+
+        for (int i = startIdx; i < endIdx; i++) {
+            int controlStatus = Comms.readSectorControlStatus(i);
+            // Combat sector
+            combatSector: if (combatSectorIndex < Comms.COMBAT_SECTOR_SLOTS
+                    && Comms.isEnemyControlStatus(controlStatus)) {
+                // If the sector is already a combat sector, don't add it again
+                for (int j = Comms.COMBAT_SECTOR_SLOTS - 1; j >= 0; j--) {
+                    if (Comms.readCombatSectorIndex(j) == i) {
+                        break combatSector;
+                    }
+                }
+
+                Comms.writeCombatSectorIndex(combatSectorIndex, i);
+                Comms.writeCombatSectorClaimStatus(combatSectorIndex, Comms.ClaimStatus.UNCLAIMED);
+                combatSectorToTurnWritten.add(combatSectorIndex, rc.getRoundNum());
+                // Comms.writeCombatSectorTurn(combatSectorIndex, rc.getRoundNum());
+                combatSectorIndex = getNextEmptyCombatSectorIdx(combatSectorIndex + 1);
+            }
+            // Explore sector
+            exploreSector: if (exploreSectorIndex < Comms.EXPLORE_SECTOR_SLOTS
+                    && controlStatus == Comms.ControlStatus.EXPLORING) {
+                // If the sector is already a explore sector, don't add it again
+                for (int j = Comms.EXPLORE_SECTOR_SLOTS - 1; j >= 0; j--) {
+                    if (Comms.readExploreSectorIndex(j) == i) {
+                        break exploreSector;
+                    }
+                }
+                Comms.writeExploreSectorIndex(exploreSectorIndex, i);
+                Comms.writeExploreSectorClaimStatus(exploreSectorIndex, Comms.ClaimStatus.UNCLAIMED);
+                exploreSectorIndex = getNextEmptyExploreSectorIdx(exploreSectorIndex + 1);
+            }
+        }
+    }
+
+    public void printFlagLocs() throws GameActionException {
+        for (int i = 0; i < Comms.OUR_FLAG_SLOTS; i++) {
+            MapLocation flagLoc = Comms.readOurFlagLocation(i);
+            if (rc.onTheMap(flagLoc)) {
+                Debug.println("Our flag (" + i + "): " + flagLoc);
+                Debug.setIndicatorDot(Debug.INDICATORS, flagLoc, 0, 255, 0);
+            }
+        }
+    }
+
+    public void printEnemyFlagLocs() throws GameActionException {
+        for (int i = 0; i < Comms.ENEMY_FLAG_SLOTS; i++) {
+            MapLocation flagLoc = Comms.readEnemyFlagLocation(i);
+            if (rc.onTheMap(flagLoc)) {
+                Debug.println("Enemy flag (" + i + "): " + flagLoc);
+                Debug.setIndicatorDot(Debug.INDICATORS, flagLoc, 0, 255, 0);
+            }
+        }
+    }
+
+    public int getNextOurFlagIdx(MapLocation loc) throws GameActionException {
+        for (int i = 0; i < Comms.OUR_FLAG_SLOTS; i++) {
+            MapLocation flagLoc = Comms.readOurFlagLocation(i);
+            if (!rc.onTheMap(flagLoc)) {
+                return i;
+            } else if (flagLoc.equals(loc)) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    public int getNextEnemyFlagIdx(MapLocation loc) throws GameActionException {
+        for (int i = 0; i < Comms.ENEMY_FLAG_SLOTS; i++) {
+            MapLocation flagLoc = Comms.readEnemyFlagLocation(i);
+            if (!rc.onTheMap(flagLoc)) {
+                return i;
+            } else if (flagLoc.equals(loc)) {
+                return -1;
+            }
+        }
+        return -1;
+    }
+
+    public void writeFlagLocs() throws GameActionException {
+        FlagInfo[] flags = rc.senseNearbyFlags(-1, team);
+        for (FlagInfo flag : flags) {
+            int idx = getNextOurFlagIdx(flag.getLocation());
+            if (idx != -1) {
+                Comms.writeOurFlagLocation(idx, flag.getLocation());
+                Debug.println("Writing our flag (" + idx + "): " + flag.getLocation());
+                return;
+            }
+        }
     }
 
     public void buyUpgrades() throws GameActionException {
@@ -216,6 +424,20 @@ public class Robot {
         MapTracker.initialize();
         flushSectorDatabase();
         MapTracker.markSeen();
+    }
+
+    public void loadSpawnLocations() throws GameActionException {
+        // Do not load this on round 1.
+        if (rc.getRoundNum() == 1 || spawnLocations != null)
+            return;
+
+        // Debug.println("Loading spawn locations");
+        // Central spawn locations are just the initial flag locations
+        spawnLocations = new MapLocation[] {
+                Comms.readOurFlagLocation(0),
+                Comms.readOurFlagLocation(1),
+                Comms.readOurFlagLocation(2),
+        };
     }
 
     /*
@@ -313,65 +535,31 @@ public class Robot {
         if (Clock.getBytecodesLeft() < MIN_BC_TO_FLUSH_SECTOR_DB)
             return;
 
-        if (rc.canWriteSharedArray(0, 0)) {
-            Comms.initBufferPool();
-            int numSectorsReported = 0;
-            final int MAX_SECTORS_REPORTED = 50;
+        Comms.initBufferPool();
+        int numSectorsReported = 0;
+        final int MAX_SECTORS_REPORTED = 50;
 
-            while (sectorToReport < numSectors &&
-                    numSectorsReported < MAX_SECTORS_REPORTED &&
-                    Clock.getBytecodesLeft() > numSectorsReported * BC_TO_WRITE_SECTOR + MIN_BC_TO_FLUSH) {
-                SectorInfo entry = sectorDatabase.at(sectorToReport);
-                if (entry.hasReports()) {
-                    // int hasAdamWell = (entry.shouldUnsetAdamWells() ? 0 : 1)
-                    // & (Comms.readSectorAdamantiumFlag(sectorToReport)
-                    // | (entry.numAdamWells() > 0 ? 1 : 0));
-                    // Comms.writeBPSectorAdamantiumFlag(sectorToReport, hasAdamWell);
-                    // int hasManaWell = (entry.shouldUnsetManaWells() ? 0 : 1)
-                    // & (Comms.readSectorManaFlag(sectorToReport)
-                    // | (entry.numManaWells() > 0 ? 1 : 0));
-                    // Comms.writeBPSectorManaFlag(sectorToReport, hasManaWell);
-                    // // int hasElixirWell = (Comms.readSectorElixirFlag(sectorToReport)
-                    // // | (entry.numElxrWells() > 0 ? 1 : 0));
-                    // // Comms.writeBPSectorElixirFlag(sectorToReport, hasElixirWell);
-
-                    // int hasIsland = Comms.readSectorIslands(sectorToReport)
-                    // | (entry.numIslands() > 0 ? 1 : 0);
-                    // Comms.writeBPSectorIslands(sectorToReport, hasIsland);
-
-                    // int oldControlStatus = Comms.readSectorControlStatus(sectorToReport);
-                    // int newControlStatus = Comms.pickControlStatus(entry.getControlStatus(),
-                    // oldControlStatus);
-                    // Comms.writeBPSectorControlStatus(sectorToReport, newControlStatus);
-
-                    entry.reset();
-                    numSectorsReported++;
-                }
-
-                sectorToReport++;
+        while (sectorToReport < numSectors &&
+                numSectorsReported < MAX_SECTORS_REPORTED &&
+                Clock.getBytecodesLeft() > numSectorsReported * BC_TO_WRITE_SECTOR + MIN_BC_TO_FLUSH) {
+            SectorInfo entry = sectorDatabase.at(sectorToReport);
+            if (entry.hasReports()) {
+                int oldControlStatus = Comms.readSectorControlStatus(sectorToReport);
+                int newControlStatus = Comms.pickControlStatus(entry.getControlStatus(),
+                        oldControlStatus);
+                Comms.writeBPSectorControlStatus(sectorToReport, newControlStatus);
+                entry.reset();
+                numSectorsReported++;
             }
 
-            if (sectorToReport == numSectors)
-                sectorToReport = 0;
-
-            Comms.flushBufferPool();
+            sectorToReport++;
         }
-    }
 
-    // public void recordIsland(int islandIdx, int sector) throws
-    // GameActionException {
-    // Team team = rc.senseTeamOccupyingIsland(islandIdx);
-    // if (team == rc.getTeam()) {
-    // sectorDatabase.at(sector).addIsland(islandIdx,
-    // Comms.ControlStatus.FRIENDLY_ISLAND);
-    // } else if (team == rc.getTeam().opponent()) {
-    // sectorDatabase.at(sector).addIsland(islandIdx,
-    // Comms.ControlStatus.ENEMY_ISLAND);
-    // } else {
-    // sectorDatabase.at(sector).addIsland(islandIdx,
-    // Comms.ControlStatus.NEUTRAL_ISLAND);
-    // }
-    // }
+        if (sectorToReport == numSectors)
+            sectorToReport = 0;
+
+        Comms.flushBufferPool();
+    }
 
     public void setupSectors() {
         sectorHeights = computeSectorSizes(Util.MAP_HEIGHT);
@@ -886,14 +1074,20 @@ public class Robot {
             return;
         }
 
-        if (roundNum % 2 == 0) {
-            setSectorControlStates();
-        } else {
-            setSectorResourceStates();
+        setSectorControlStates();
+    }
+
+    public void recordEnemyFlag(MapLocation loc) throws GameActionException {
+        if (rc.getRoundNum() < GameConstants.SETUP_ROUNDS)
+            return;
+
+        int nextFlagIdx = getNextEnemyFlagIdx(loc);
+        if (nextFlagIdx == -1) {
+            return;
         }
 
-        // int bytecodeUsed2 = Clock.getBytecodeNum();
-        // rc.setIndicatorString("Sector States: "+(bytecodeUsed2 - bytecodeUsed));
+        Comms.writeEnemyFlagLocation(nextFlagIdx, loc);
+        sectorDatabase.at(whichSector(loc)).addFlag();
     }
 
     /**
@@ -908,44 +1102,16 @@ public class Robot {
         for (int i = 0; i < numEnemies; i++) {
             RobotInfo enemy = enemies[i];
             int sectorIdx = whichXLoc[enemy.location.x] + whichYLoc[enemy.location.y];
-
             int controlStatus = Comms.ControlStatus.ENEMY;
-
             sectorDatabase.at(sectorIdx).addEnemy(controlStatus);
         }
 
-        // int[] islandIdxs = rc.senseNearbyIslands();
-        // if (islandIdxs.length > 0) {
-        // for (int idx : islandIdxs) {
-        // // This costs a lot of bytecode, but I don't know how to get around this
-        // recordIsland(idx, whichSector(rc.senseNearbyIslandLocations(idx)[0]));
-        // }
-        // }
-    }
-
-    /**
-     * Updates sector information.
-     * Scans nearby sectors to mark as explored and adds wells.
-     * 
-     * @throws GameActionException
-     */
-    public void setSectorResourceStates() throws GameActionException {
-        // Mark nearby sectors as explored
-        int[][] shifts = { { 0, 3 }, { 2, 2 }, { 3, 0 }, { 2, -2 }, { 0, -3 }, { -2, -2 }, { -3, 0 }, { -2, 2 } };
-        for (int[] shift : shifts) {
-            MapLocation shiftedLocation = currLoc.translate(shift[0], shift[1]);
-            if (rc.canSenseLocation(shiftedLocation)) {
-                // int sectorIdx = whichSector(shiftedLocation);
-                // Note: Inlined to save bytecode
-                int sectorIdx = whichXLoc[shiftedLocation.x] + whichYLoc[shiftedLocation.y];
-                sectorDatabase.at(sectorIdx).exploreSector();
-            }
+        FlagInfo[] flags = rc.senseNearbyFlags(-1, opponent);
+        for (FlagInfo flag : flags) {
+            if (flag.isPickedUp())
+                continue;
+            recordEnemyFlag(flag.getLocation());
         }
-
-        // for (MapLocation loc : rc.senseNearbyCrumbs()) {
-        // int sector = whichSector(loc);
-        // sectorDatabase.at(sector).addCrumb(loc);
-        // }
     }
 
     /**
@@ -1302,6 +1468,26 @@ public class Robot {
         }
     }
 
+    public void displayCombatSectors() throws GameActionException {
+        for (int i = 0; i < Comms.COMBAT_SECTOR_SLOTS; i++) {
+            int sector = Comms.readCombatSectorIndex(i);
+            if (sector == Comms.UNDEFINED_SECTOR_INDEX)
+                continue;
+            MapLocation loc = sectorCenters[sector];
+            rc.setIndicatorDot(loc, 255, 0, 0);
+        }
+    }
+
+    public void displayExploreSectors() throws GameActionException {
+        for (int i = 0; i < Comms.EXPLORE_SECTOR_SLOTS; i++) {
+            int sector = Comms.readExploreSectorIndex(i);
+            if (sector == Comms.UNDEFINED_SECTOR_INDEX)
+                continue;
+            MapLocation loc = sectorCenters[sector];
+            rc.setIndicatorDot(loc, 0, 0, 255);
+        }
+    }
+
     public void updateSymmetryLocs() throws GameActionException {
         if (spawnLocations == null)
             return;
@@ -1365,7 +1551,7 @@ public class Robot {
             Debug.printString("enemy");
             enemySectorLoc = sectorCenters[sectorCenterIdx];
         } else {
-            sectorCenterIdx = getNearestCombatSectorByControlStatus(Comms.ControlStatus.ENEMY_BREAD);
+            sectorCenterIdx = getNearestCombatSectorByControlStatus(Comms.ControlStatus.ENEMY_FLAG);
             if (sectorCenterIdx != Comms.UNDEFINED_SECTOR_INDEX) {
                 Debug.printString("e_bread");
                 enemySectorLoc = sectorCenters[sectorCenterIdx];
@@ -1435,19 +1621,19 @@ public class Robot {
         return true;
     }
 
-    public MapLocation getClosestFriendlyHQ(MapLocation loc) throws GameActionException {
+    public MapLocation getClosestSpawnLocation(MapLocation loc) throws GameActionException {
         MapLocation bestLoc = null;
-        MapLocation hqLoc;
+        MapLocation spawnLoc;
         int bestDist = Integer.MAX_VALUE;
         int dist;
         for (int i = 0; i < spawnLocations.length; i++) {
-            hqLoc = spawnLocations[i];
-            if (!rc.onTheMap(hqLoc))
+            spawnLoc = spawnLocations[i];
+            if (!rc.onTheMap(spawnLoc))
                 continue;
-            dist = loc.distanceSquaredTo(hqLoc);
+            dist = loc.distanceSquaredTo(spawnLoc);
             if (dist < bestDist) {
                 bestDist = dist;
-                bestLoc = hqLoc;
+                bestLoc = spawnLoc;
             }
         }
         return bestLoc;
@@ -1671,5 +1857,156 @@ public class Robot {
         }
 
         exploreTarget = Explore.getExploreTarget();
+    }
+
+    public void loadExploreTarget2() throws GameActionException {
+        MapLocation target;
+        goingToSymLoc = false;
+        MapLocation symLoc = chooseSymmetricLoc();
+        MapLocation combatSector = null;
+
+        int combatSectorIdx = getPrioritizedCombatSectorIdx();
+        if (combatSectorIdx != Comms.UNDEFINED_SECTOR_INDEX) {
+            combatSector = sectorCenters[combatSectorIdx];
+        }
+
+        if (lastClosestEnemy != null
+                && turnSawLastClosestAttackingEnemy + LAST_ATTACKING_ENEMY_TIMEOUT >= rc.getRoundNum()) {
+            // && friendlyAttackingHealth >= lastEnemyAttackingHealth) {
+            Debug.printString("LastEnemy");
+            target = lastClosestEnemy;
+        } else if (combatSector != null && symLoc != null) {
+            int combSecDist = Util.manhattan(currLoc, combatSector);
+            int symLocDist = Util.manhattan(currLoc, symLoc);
+            int controlStatus = Comms.readSectorControlStatus(combatSectorIdx);
+            boolean protect = combSecDist * Util.SYM_TO_COMB_DIST_RATIO < symLocDist;
+            boolean closeToHQ = Util.manhattan(combatSector,
+                    getClosestSpawnLocation(combatSector)) <= Util.COMB_TO_HOME_DIST;
+            boolean protectFromEnemy = combSecDist * Util.SYM_TO_COMB_HOME_AGGRESSIVE_DIST_RATIO < symLocDist &&
+                    controlStatus == Comms.ControlStatus.ENEMY;
+            if (protect || (closeToHQ && protectFromEnemy)) {
+                target = combatSector;
+                Debug.printString("PrefCombSec");
+            } else {
+                target = symLoc;
+                markSymmetricLocSeen(target);
+                goingToSymLoc = true;
+                Debug.printString("PrefSymLoc");
+            }
+        } else if (combatSector != null) {
+            target = combatSector;
+            Debug.printString("CombSec");
+        } else if (symLoc != null) {
+            target = symLoc;
+            markSymmetricLocSeen(target);
+            goingToSymLoc = true;
+            Debug.printString("SymLoc");
+        } else {
+            int exploreSectorIdx = getNearestExploreSectorIdx();
+            if (exploreSectorIdx != Comms.UNDEFINED_SECTOR_INDEX) {
+                target = sectorCenters[exploreSectorIdx];
+                Debug.printString("ExpSec");
+            } else {
+                target = Explore.getExploreTarget();
+                Debug.printString("Exploring");
+            }
+        }
+
+        if (goingToSymLoc) {
+            // Time out sym locs after a while because we are not guaranteed it
+            // is reachable.
+            if (!target.equals(exploreTarget)) {
+                turnsFollowedExploreTarget = 0;
+                EXPLORE_TARGET_TIMEOUT = EXPLORE_TIMEOUT_MULT * Util.distance(currLoc, target);
+            }
+        } else {
+            EXPLORE_TARGET_TIMEOUT = GameConstants.GAME_MAX_NUMBER_OF_ROUNDS;
+        }
+
+        exploreTarget = target;
+    }
+
+    public MapLocation chooseSymmetricLoc() throws GameActionException {
+        MapLocation bestLoc = null;
+        MapLocation possibleLoc;
+        int bestDist = Integer.MAX_VALUE;
+        int currDist;
+        for (int i = enemySpawnLocs.length; --i >= 0;) {
+            possibleLoc = enemySpawnLocs[i];
+            currDist = currLoc.distanceSquaredTo(possibleLoc);
+            // int controlStatus = Comms.readSectorControlStatus(whichSector(possibleLoc));
+            // boolean notTraversed = controlStatus == Comms.ControlStatus.UNKNOWN ||
+            // controlStatus == Comms.ControlStatus.EXPLORING;
+
+            if (currDist < bestDist && !seenSymmetricLocs.contains(possibleLoc)) {
+                bestLoc = possibleLoc;
+                bestDist = currDist;
+            }
+        }
+
+        // Consider the center of the map as a symmetric location
+        if (isSemiSmallMap()) {
+            possibleLoc = new MapLocation(Util.MAP_WIDTH / 2, Util.MAP_HEIGHT / 2);
+            currDist = currLoc.distanceSquaredTo(possibleLoc);
+            if (currDist < bestDist && !seenSymmetricLocs.contains(possibleLoc)) {
+                bestLoc = possibleLoc;
+                bestDist = currDist;
+            }
+        }
+
+        return bestLoc;
+    }
+
+    public void resetLocalEnemyInformation() throws GameActionException {
+        closestEnemy = null;
+
+        int closestDist = Integer.MAX_VALUE;
+        RobotInfo bot;
+        MapLocation candidateLoc;
+        int candidateDist;
+        for (int i = 0; i < enemies.length; i++) {
+            bot = enemies[i];
+            candidateLoc = bot.getLocation();
+            candidateDist = currLoc.distanceSquaredTo(candidateLoc);
+            if (candidateDist < closestDist) {
+                closestDist = candidateDist;
+                closestEnemy = bot;
+                lastClosestEnemy = bot.getLocation();
+                turnSawLastClosestAttackingEnemy = rc.getRoundNum();
+            }
+        }
+    }
+
+    public void markSymmetricLocSeen(MapLocation target) throws GameActionException {
+        if (rc.canSenseLocation(target)) {
+            if (rc.getLocation().distanceSquaredTo(target) <= 8) {
+                seenSymmetricLocs.add(target);
+            } else if (!rc.sensePassability(target)) {
+                // If the target is not passable, it is probably not reachable.
+                // Check for at least 3 other adjacent tiles that are not passable
+                // and mark it as seen if so.
+                // Theoretically we might want to remove the symmetry that this target
+                // is a part of. But that seems a little risky.
+                int numNotPassable = 0;
+                for (Direction dir : Util.directions) {
+                    if (rc.canSenseLocation(target.add(dir)) &&
+                            !rc.sensePassability(target.add(dir))) {
+                        numNotPassable++;
+                    }
+                }
+
+                if (numNotPassable >= 3) {
+                    seenSymmetricLocs.add(target);
+                }
+            }
+        }
+
+        if (turnsFollowedExploreTarget > EXPLORE_TARGET_TIMEOUT) {
+            // We have been trying to get to this target for a while and it is not
+            // reachable. Mark it as seen.
+            // Theoretically we might want to remove the symmetry that this target
+            // is a part of. But that seems a little risky.
+            seenSymmetricLocs.add(target);
+        }
     }
 }

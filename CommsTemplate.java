@@ -16,14 +16,14 @@ public class Comms {
         public static final int EXPLORING = 1;
         public static final int EMPTY = 2;
 
-        public static final int ENEMY = 3;
-        public static final int ENEMY_BREAD = 4;
-        public static final int ENEMY_SPAWN_LOC = 5;
+        public static final int ENEMY_SPAWN_LOC = 3;
+        public static final int ENEMY = 4;
+        public static final int ENEMY_FLAG = 5;
 
-        public static final int FRIENDLY_SPAWN_LOC = 6;
-        public static final int FRIENDLY_BREAD = 7;
+        // public static final int FRIENDLY_SPAWN_LOC = 6;
+        // public static final int FRIENDLY_FLAG = 7;
 
-        public static final int NUM_CONTROL_STATUS = 8;
+        public static final int NUM_CONTROL_STATUS = 6;
     }
 
     public class ClaimStatus {
@@ -42,20 +42,32 @@ public class Comms {
 
         bufferPool = new int[64];
         dirtyFlags = new boolean[64];
+    }
 
+    public static void initComms() throws GameActionException {
         if (rc.getRoundNum() == 1) {
             initPrioritySectors();
             initSymmetry();
+            initLocations();
         }
     }
 
-    public static MapLocation readOurBreadLocation(int idx) throws GameActionException {
-        return new MapLocation(readOurBreadXCoord(idx), readOurBreadYCoord(idx));
+    public static MapLocation readOurFlagLocation(int idx) throws GameActionException {
+        return new MapLocation(readOurFlagXCoord(idx), readOurFlagYCoord(idx));
     }
 
-    public static void writeOurBreadLocation(int idx, MapLocation loc) throws GameActionException {
-        writeOurBreadXCoord(idx, loc.x);
-        writeOurBreadYCoord(idx, loc.y);
+    public static void writeOurFlagLocation(int idx, MapLocation loc) throws GameActionException {
+        writeOurFlagXCoord(idx, loc.x);
+        writeOurFlagYCoord(idx, loc.y);
+    }
+
+    public static MapLocation readEnemyFlagLocation(int idx) throws GameActionException {
+        return new MapLocation(readEnemyFlagXCoord(idx), readEnemyFlagYCoord(idx));
+    }
+
+    public static void writeEnemyFlagLocation(int idx, MapLocation loc) throws GameActionException {
+        writeEnemyFlagXCoord(idx, loc.x);
+        writeEnemyFlagYCoord(idx, loc.y);
     }
 
     public static MapLocation readOurSpawnLocation(int idx) throws GameActionException {
@@ -71,10 +83,29 @@ public class Comms {
         writeSymmetryAll(7);
     }
 
+    public static void initLocations() throws GameActionException {
+        int OFF_THE_MAP = 0xFFF;
+        writeEnemyFlagAll(0, OFF_THE_MAP);
+        writeEnemyFlagAll(1, OFF_THE_MAP);
+        writeEnemyFlagAll(2, OFF_THE_MAP);
+
+        writeOurFlagAll(0, OFF_THE_MAP);
+        writeOurFlagAll(1, OFF_THE_MAP);
+        writeOurFlagAll(2, OFF_THE_MAP);
+
+        writeOurSpawnAll(0, OFF_THE_MAP);
+        writeOurSpawnAll(1, OFF_THE_MAP);
+        writeOurSpawnAll(2, OFF_THE_MAP);
+    }
+
+    public static int pickControlStatus(int newStatus, int currStatus) {
+        return Math.max(newStatus, currStatus);
+    }
+
     public static boolean isEnemyControlStatus(int controlStatus) {
         switch (controlStatus) {
             case ControlStatus.ENEMY:
-            case ControlStatus.ENEMY_BREAD:
+            case ControlStatus.ENEMY_FLAG:
             case ControlStatus.ENEMY_SPAWN_LOC:
                 return true;
             default:

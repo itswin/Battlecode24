@@ -46,91 +46,10 @@ public class SectorInfo {
         return found;
     }
 
-    // public void addWell(MapLocation loc, ResourceType type) {
-    //     found = true;
-    //     if (type == ResourceType.ADAMANTIUM) {
-    //         unsetAdamWells = false;
-    //         adamWells.add(loc);
-    //         if (adamWell == null) {
-    //             adamWell = loc;
-    //         }
-    //     } else if (type == ResourceType.MANA) {
-    //         unsetManaWells = false;
-    //         manaWells.add(loc);
-    //         if (manaWell == null) {
-    //             manaWell = loc;
-    //         }
-    //     } else if (type == ResourceType.ELIXIR) {
-    //         elxrWells.add(loc);
-    //         if (elixirWell == null) {
-    //             elixirWell = loc;
-    //         }
-    //         if (manaWells.contains(loc)) {
-    //             manaWells.remove(loc);
-    //             if (manaWells.size == 0) {
-    //                 unsetManaWells = true;
-    //             }
-    //         }
-    //         if (adamWells.contains(loc)) {
-    //             adamWells.remove(loc);
-    //             if (adamWells.size == 0) {
-    //                 unsetAdamWells = true;
-    //             }
-    //         }
-    //     }
-    // }
-
-    // public void addIsland(int islandIdx, int control) {
-    //     found = true;
-    //     if (control == Comms.ControlStatus.NEUTRAL_ISLAND) {
-    //         unsetNeutralIslands = false;
-    //         neutralIslands.add(islandIdx);
-    //         if (friendlyIslands.contains(islandIdx)) {
-    //             friendlyIslands.remove(islandIdx);
-    //             if (friendlyIslands.size == 0) {
-    //                 unsetFriendlyIslands = true;
-    //             }
-    //         }
-    //         if (enemyIslands.contains(islandIdx)) {
-    //             enemyIslands.remove(islandIdx);
-    //             if (enemyIslands.size == 0) {
-    //                 unsetEnemyIslands = true;
-    //             }
-    //         }
-    //     } else if (control == Comms.ControlStatus.FRIENDLY_ISLAND) {
-    //         unsetFriendlyIslands = false;
-    //         friendlyIslands.add(islandIdx);
-    //         if (neutralIslands.contains(islandIdx)) {
-    //             neutralIslands.remove(islandIdx);
-    //             if (neutralIslands.size == 0) {
-    //                 unsetNeutralIslands = true;
-    //             }
-    //         }
-    //         if (enemyIslands.contains(islandIdx)) {
-    //             enemyIslands.remove(islandIdx);
-    //             if (enemyIslands.size == 0) {
-    //                 unsetEnemyIslands = true;
-    //             }
-    //         }
-    //     } else if (control == Comms.ControlStatus.ENEMY_ISLAND) {
-    //         unsetEnemyIslands = false;
-    //         enemyIslands.add(islandIdx);
-    //         if (neutralIslands.contains(islandIdx)) {
-    //             neutralIslands.remove(islandIdx);
-    //             if (neutralIslands.size == 0) {
-    //                 unsetNeutralIslands = true;
-    //             }
-    //         }
-    //         if (friendlyIslands.contains(islandIdx)) {
-    //             friendlyIslands.remove(islandIdx);
-    //             if (friendlyIslands.size == 0) {
-    //                 unsetFriendlyIslands = true;
-    //             }
-    //         }
-    //     }
-
-    //     setControlStatus(control);
-    // }
+    public void addFlag() {
+        found = true;
+        setControlStatus(Comms.ControlStatus.ENEMY_FLAG);
+    }
 
     public void addEnemy(int cStatus) {
         found = true;
@@ -140,26 +59,21 @@ public class SectorInfo {
     }
 
     public int getControlStatus() {
-        boolean isEnemyInfoStale = Robot.rc.getRoundNum() > lastRoundEnemyAdded + Util.CLEAR_ENEMY_INFO_PERIOD;
-
-        // if (controlStatusSet[Comms.ControlStatus.FRIENDLY_ISLAND]) {
-        //     return Comms.ControlStatus.FRIENDLY_ISLAND;
-        // } else if (controlStatusSet[Comms.ControlStatus.ENEMY_AGGRESIVE] && !isEnemyInfoStale) {
-        //     return Comms.ControlStatus.ENEMY_AGGRESIVE;
-        // } else if (controlStatusSet[Comms.ControlStatus.ENEMY_ISLAND]) {
-        //     return Comms.ControlStatus.ENEMY_ISLAND;
-        // } else if (controlStatusSet[Comms.ControlStatus.ENEMY_PASSIVE] && !isEnemyInfoStale) {
-        //     return Comms.ControlStatus.ENEMY_PASSIVE;
-        // } else if (controlStatusSet[Comms.ControlStatus.NEUTRAL_ISLAND]) {
-        //     return Comms.ControlStatus.NEUTRAL_ISLAND;
-        // } else if (controlStatusSet[Comms.ControlStatus.EMPTY]) {
-        //     return Comms.ControlStatus.EMPTY;
-        // } else if (controlStatusSet[Comms.ControlStatus.EXPLORING]) {
-        //     return Comms.ControlStatus.EXPLORING;
-        // } else {
-        //     return Comms.ControlStatus.UNKNOWN;
-        // }
-        return Comms.ControlStatus.UNKNOWN;
+        boolean isEnemyInfoStale = Robot.rc.getRoundNum() > lastRoundEnemyAdded + Util.ENEMY_INFO_STALE_TIMEOUT;
+        if (controlStatusSet[Comms.ControlStatus.ENEMY_FLAG]) {
+            return Comms.ControlStatus.ENEMY_FLAG;
+        } else if (controlStatusSet[Comms.ControlStatus.ENEMY_SPAWN_LOC]) {
+            return Comms.ControlStatus.ENEMY_SPAWN_LOC;
+        } else if (controlStatusSet[Comms.ControlStatus.ENEMY] &&
+                !isEnemyInfoStale) {
+            return Comms.ControlStatus.ENEMY;
+        } else if (controlStatusSet[Comms.ControlStatus.EMPTY]) {
+            return Comms.ControlStatus.EMPTY;
+        } else if (controlStatusSet[Comms.ControlStatus.EXPLORING]) {
+            return Comms.ControlStatus.EXPLORING;
+        } else {
+            return Comms.ControlStatus.UNKNOWN;
+        }
     }
 
     public void setControlStatus(int cStatus) {
