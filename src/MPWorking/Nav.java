@@ -2,7 +2,7 @@ package MPWorking;
 
 import battlecode.common.*;
 import MPWorking.fast.*;
-// import MPWorking.bfs.*;
+import MPWorking.bfs.*;
 
 public class Nav {
     static RobotController rc;
@@ -21,12 +21,8 @@ public class Nav {
     static final int id = 13175;
 
     // public static final int BFS34_COST = 6000;
-    // public static final int BFS20_COST = 4000;
-    // public static final int BFS10_COST = 2500;
-
-    public static final int BFSCOOLDOWN34_COST = 7000;
-    public static final int BFSCOOLDOWN20_COST = 5000;
-    public static final int BFSCOOLDOWN10_COST = 3000;
+    public static final int BFS20_COST = 4000;
+    public static final int BFS10_COST = 2500;
 
     static void init(RobotController r) {
         rc = r;
@@ -35,9 +31,8 @@ public class Nav {
         turnsSinceClosestDistanceDecreased = 0;
         VisitedTracker.reset();
 
-        // BFSCooldown34.init(r);
-        // BFSCooldown20.init(r);
-        // BFSCooldown10.init(r);
+        BFS20.init(r);
+        BFS10.init(r);
     }
 
     // @requires loc is adjacent to currLoc
@@ -77,14 +72,11 @@ public class Nav {
         int bcLeft = Clock.getBytecodesLeft();
         Direction dir = null;
         // TODO
-        // if (bcLeft >= BFSCOOLDOWN34_COST + bytecodeCushion &&
-        // rc.getType().visionRadiusSquared >= 29) {
-        // dir = BFSCooldown34.bestDir(dest);
-        // } else if (bcLeft >= BFSCOOLDOWN20_COST + bytecodeCushion) {
-        // dir = BFSCooldown20.bestDir(dest);
-        // } else if (bcLeft >= BFSCOOLDOWN10_COST + bytecodeCushion) {
-        // dir = BFSCooldown10.bestDir(dest);
-        // }
+        if (bcLeft >= BFS20_COST + bytecodeCushion) {
+            dir = BFS20.bestDir(dest);
+        } else if (bcLeft >= BFS10_COST + bytecodeCushion) {
+            dir = BFS10.bestDir(dest);
+        }
 
         if (dir == null) {
             if (bytecodeCushion == 9999) {
