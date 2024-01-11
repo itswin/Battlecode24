@@ -26,7 +26,11 @@ public class Util {
     static final double SYM_TO_COMB_HOME_PASSIVE_DIST_RATIO = 1.5;
     static final double COMB_TO_HOME_DIST = 10;
 
+    static final int JUST_OUTSIDE_INTERACT_RADIUS = 5;
+
     static final int EXP_TARGET_DIST_TO_LEAVE_HQ = 15;
+
+    static final int RANDOM_EXPLORE_ROUNDS = 100;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -445,5 +449,9 @@ public class Util {
             }
         }
         return bestLoc;
+    }
+
+    static boolean isDamLoc(MapInfo info) throws GameActionException {
+        return !info.isPassable() && !info.isWall() && !info.isWater();
     }
 }

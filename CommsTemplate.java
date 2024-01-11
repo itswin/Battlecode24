@@ -8,6 +8,9 @@ public class Comms {
 
     private static int[] bufferPool;
     private static boolean[] dirtyFlags;
+
+    static final int OFF_THE_MAP_LOC = 0xFFF;
+
     // CONSTS
 
     // ControlStatus priorities are in increasing priority.
@@ -84,18 +87,17 @@ public class Comms {
     }
 
     public static void initLocations() throws GameActionException {
-        int OFF_THE_MAP = 0xFFF;
-        writeEnemyFlagAll(0, OFF_THE_MAP);
-        writeEnemyFlagAll(1, OFF_THE_MAP);
-        writeEnemyFlagAll(2, OFF_THE_MAP);
+        writeEnemyFlagAll(0, OFF_THE_MAP_LOC);
+        writeEnemyFlagAll(1, OFF_THE_MAP_LOC);
+        writeEnemyFlagAll(2, OFF_THE_MAP_LOC);
 
-        writeOurFlagAll(0, OFF_THE_MAP);
-        writeOurFlagAll(1, OFF_THE_MAP);
-        writeOurFlagAll(2, OFF_THE_MAP);
+        writeOurFlagAll(0, OFF_THE_MAP_LOC);
+        writeOurFlagAll(1, OFF_THE_MAP_LOC);
+        writeOurFlagAll(2, OFF_THE_MAP_LOC);
 
-        writeOurSpawnAll(0, OFF_THE_MAP);
-        writeOurSpawnAll(1, OFF_THE_MAP);
-        writeOurSpawnAll(2, OFF_THE_MAP);
+        writeOurSpawnAll(0, OFF_THE_MAP_LOC);
+        writeOurSpawnAll(1, OFF_THE_MAP_LOC);
+        writeOurSpawnAll(2, OFF_THE_MAP_LOC);
     }
 
     public static int pickControlStatus(int newStatus, int currStatus) {

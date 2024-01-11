@@ -258,7 +258,7 @@ public class Robot {
             int controlStatus = Comms.readSectorControlStatus(sectorIdx);
             if (controlStatus == Comms.ControlStatus.ENEMY) {
                 // Mark old combat sectors as need to be explored.
-                Debug.println("Clearing enemy info sector at : " + sectorCenters[sectorIdx]);
+                // Debug.println("Clearing enemy info sector at : " + sectorCenters[sectorIdx]);
                 Comms.writeSectorControlStatus(sectorIdx, Comms.ControlStatus.EXPLORING);
             }
         }
@@ -273,8 +273,8 @@ public class Robot {
             } else if (turn + Util.ENEMY_INFO_STALE_TIMEOUT < rc.getRoundNum()) {
                 Comms.writeCombatSectorIndex(combatSectorIdx, Comms.UNDEFINED_SECTOR_INDEX);
                 combatSectorToTurnWritten.remove(combatSectorIdx);
-                Debug.println("Clearing combat sector at : " +
-                        sectorCenters[combatSectorIdx]);
+                // Debug.println("Clearing combat sector at : " +
+                // sectorCenters[combatSectorIdx]);
             }
         }
     }
@@ -1087,7 +1087,7 @@ public class Robot {
         }
 
         Comms.writeEnemyFlagLocation(nextFlagIdx, loc);
-        sectorDatabase.at(whichSector(loc)).addFlag();
+        // sectorDatabase.at(whichSector(loc)).addFlag();
     }
 
     /**
@@ -1839,18 +1839,10 @@ public class Robot {
         return bestCrumb;
     }
 
-    public void loadExploreTarget() throws GameActionException {
-        FlagInfo flag = findFlagInfo();
-        if (flag != null) {
-            Debug.printString("ET:Flag");
-            exploreTarget = flag.getLocation();
-            turnsFollowedExploreTarget = 0;
-            return;
-        }
-
+    public void loadSetupExploreTarget() throws GameActionException {
         MapLocation crumb = findCrumbs();
         if (crumb != null) {
-            Debug.printString("ET:Crumb");
+            Debug.printString("Crumb");
             exploreTarget = crumb;
             turnsFollowedExploreTarget = 0;
             return;
@@ -1870,7 +1862,11 @@ public class Robot {
             combatSector = sectorCenters[combatSectorIdx];
         }
 
-        if (lastClosestEnemy != null
+        MapLocation crumb = findCrumbs();
+        if (crumb != null) {
+            Debug.printString("Crumb");
+            target = crumb;
+        } else if (lastClosestEnemy != null
                 && turnSawLastClosestAttackingEnemy + LAST_ATTACKING_ENEMY_TIMEOUT >= rc.getRoundNum()) {
             // && friendlyAttackingHealth >= lastEnemyAttackingHealth) {
             Debug.printString("LastEnemy");
@@ -1979,7 +1975,7 @@ public class Robot {
 
     public void markSymmetricLocSeen(MapLocation target) throws GameActionException {
         if (rc.canSenseLocation(target)) {
-            if (rc.getLocation().distanceSquaredTo(target) <= 8) {
+            if (rc.getLocation().distanceSquaredTo(target) <= 13) {
                 seenSymmetricLocs.add(target);
             } else if (!rc.sensePassability(target)) {
                 // If the target is not passable, it is probably not reachable.

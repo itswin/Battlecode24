@@ -7,6 +7,7 @@ public class MicroDuck {
     static final int INF = 1000000;
     static final float ACTION_RANGE = GameConstants.ATTACK_RADIUS_SQUARED;
     static final float VISION_RANGE = GameConstants.VISION_RADIUS_SQUARED;
+    static final int ACTION_RANGE_EXTENDED = 10;
 
     static final Direction[] dirs = {
             Direction.NORTH,
@@ -81,6 +82,7 @@ public class MicroDuck {
             microInfo[i] = new MicroInfo(dirs[i]);
 
         currentActionRadius = ACTION_RANGE;
+        currentExtendedActionRadius = ACTION_RANGE_EXTENDED;
 
         boolean isThreatened = true;
         i = units.length;
@@ -239,7 +241,20 @@ public class MicroDuck {
                 possibleEnemyDucks++;
             if (dist <= ACTION_RANGE && canAttack) {
                 // Calculate a score based on how much percent damage
-                float damageScore = DAMAGE / currentUnit.getHealth();
+                float damageScore = 0;
+
+                int health = currentUnit.getHealth();
+                if (DAMAGE > health) {
+                    // We want to reward killing units
+                    // Reward dealing more damage
+                    // Range 1 to 11
+                    damageScore = 10 * health / DAMAGE + 1;
+                } else {
+                    // Reward dealing greater percent damage
+                    // Range 0 to 1
+                    damageScore = DAMAGE / health;
+                }
+
                 if (damageScore > enemyDamageScore) {
                     enemyDamageScore = damageScore;
                     enemyTarget = currentLoc;
@@ -257,6 +272,8 @@ public class MicroDuck {
             if (dist <= ACTION_RANGE && canAttack) {
                 // Calculate score based on percent healed over current health
                 float healScore = HEAL / currentUnit.getHealth();
+                if (currentUnit.getHealth() <= 2 * DAMAGE)
+                    healScore += 2;
                 if (healScore > allyHealScore) {
                     allyHealScore = healScore;
                     allyTarget = currentLoc;

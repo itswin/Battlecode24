@@ -56,7 +56,7 @@ if __name__ == '__main__':
             filedata = filedata.replace(working_name, snapshot_name)
             filedata = filedata.replace(debug_verbose_on, debug_verbose_off)
             filedata = filedata.replace(local_resign_off, local_resign_on)
-            filedata = filedata.replace(resign_off, resign_on)
+            # filedata = filedata.replace(resign_on, resign_off)
 
             # Write the file out again
             with open(file_path, 'w') as new_file:
