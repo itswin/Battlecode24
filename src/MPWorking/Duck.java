@@ -16,6 +16,9 @@ public class Duck extends Robot {
     MapLocation target;
     MapLocation enemyFlagPickupLoc = null;
 
+    FlagInfo[] enemyFlags;
+    MapLocation enemyFlagLoc;
+
     State currState = State.SETUP;
 
     public Duck(RobotController r) throws GameActionException {
@@ -28,6 +31,7 @@ public class Duck extends Robot {
         }
 
         closestEnemy = getBestEnemy(enemies);
+        loadEnemyFlagTarget();
 
         trySwitchState();
         Debug.printString("S: " + currState);
@@ -37,19 +41,19 @@ public class Duck extends Robot {
     }
 
     public void trySwitchState() throws GameActionException {
-        if (rc.hasFlag()) {
-            currState = State.CAPTURING_FLAG;
-            return;
-        }
-
         switch (currState) {
             case SETUP:
                 if (rc.getRoundNum() > GameConstants.SETUP_ROUNDS)
                     currState = State.EXPLORING;
             case EXPLORING:
+                if (enemyFlagLoc != null) {
+                    currState = State.CAPTURING_FLAG;
+                }
                 break;
             case CAPTURING_FLAG:
-                currState = State.EXPLORING;
+                if (enemyFlagLoc == null && !rc.hasFlag()) {
+                    currState = State.EXPLORING;
+                }
                 break;
         }
     }
@@ -82,6 +86,24 @@ public class Duck extends Robot {
         }
     }
 
+    public void loadEnemyFlagTarget() throws GameActionException {
+        enemyFlags = rc.senseNearbyFlags(-1, opponent);
+        enemyFlagLoc = null;
+        MapLocation closestLoc = null;
+        int closestDist = Integer.MAX_VALUE;
+        for (FlagInfo flag : enemyFlags) {
+            if (!flag.isPickedUp()) {
+                MapLocation flagLoc = flag.getLocation();
+                int dist = rc.getLocation().distanceSquaredTo(flagLoc);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closestLoc = flagLoc;
+                }
+            }
+        }
+        enemyFlagLoc = closestLoc;
+    }
+
     public void tryClearEnemyFlagPickupLoc() throws GameActionException {
         if (!rc.isSpawned() || rc.hasFlag())
             return;
@@ -96,9 +118,7 @@ public class Duck extends Robot {
             }
         }
 
-        if (isOnSpawnLoc) {
-            return;
-        }
+        assert isOnSpawnLoc;
 
         int numEnemyFlags = 0;
         int enemyFlagPickupLocSlot = -1;
@@ -153,36 +173,39 @@ public class Duck extends Robot {
 
     public void doExplore() throws GameActionException {
         Nav.move(exploreTarget, true);
-
-        if (rc.canPickupFlag(rc.getLocation())) {
-            FlagInfo flagInfo = rc.senseNearbyFlags(0)[0];
-            if (flagInfo.getTeam() == opponent) {
-                rc.pickupFlag(rc.getLocation());
-                Debug.printString("Picked up flag");
-                enemyFlagPickupLoc = rc.getLocation();
-
-                MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-                target = Util.getClosestLoc(spawnLocs);
-            }
-        }
-
         turnsFollowedExploreTarget++;
         tryAttackBestEnemy();
     }
 
     public void doCapture() throws GameActionException {
-        MapLocation[] spawnLocs = rc.getAllySpawnLocations();
-        boolean foundTarget = false;
-        for (MapLocation spawnLoc : spawnLocs) {
-            if (spawnLoc.equals(target)) {
-                foundTarget = true;
-                break;
+        if (!rc.hasFlag()) {
+            assert enemyFlagLoc != null;
+            Nav.move(enemyFlagLoc, true);
+            if (rc.canPickupFlag(enemyFlagLoc)) {
+                enemyFlagPickupLoc = enemyFlagLoc;
+                rc.pickupFlag(enemyFlagLoc);
+                Debug.printString("Picked up flag");
+                MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+                target = Util.getClosestLoc(spawnLocs);
+            }
+        } else {
+            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+            boolean foundTarget = false;
+            for (MapLocation spawnLoc : spawnLocs) {
+                if (spawnLoc.equals(target)) {
+                    foundTarget = true;
+                    break;
+                }
+            }
+            assert foundTarget;
+
+            boolean hadFlagBeforeMove = rc.hasFlag();
+            Nav.move(target, true);
+            boolean hasFlagAfterMove = rc.hasFlag();
+
+            if (hadFlagBeforeMove && !hasFlagAfterMove) {
+                tryClearEnemyFlagPickupLoc();
             }
         }
-        assert foundTarget;
-
-        Nav.move(target);
-
-        tryClearEnemyFlagPickupLoc();
     }
 }

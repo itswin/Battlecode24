@@ -4,6 +4,7 @@
 import sys
 import shutil, errno
 import os
+import argparse
 
 def copyanything(src, dst):
     try:
@@ -13,16 +14,13 @@ def copyanything(src, dst):
             shutil.copy(src, dst)
         else: raise
 
-def usage():
-    print("Usage: snap.py <package_name>")
-
 if __name__ == '__main__':
-    num_args = len(sys.argv)
-    if num_args != 2:
-        usage()
-        quit()
+    parser = argparse.ArgumentParser(description='Snapshots the MPWorking directory into a new package')
+    parser.add_argument('package_name', type=str)
+    parser.add_argument('--submission', action='store_true', help='Copy for submission')
+    args = parser.parse_args()
 
-    snapshot_name = sys.argv[1]
+    snapshot_name = args.package_name
 
     if snapshot_name[:2] != "MP":
         print("Invalid package name:", snapshot_name)
@@ -42,6 +40,8 @@ if __name__ == '__main__':
     local_resign_on = "localResign();"
     resign_on = "rc.resign();"
     resign_off = "// rc.resign();"
+    assert_on = "assert";
+    assert_off = "// assert";
 
     copyanything(working_src, snapshot_dst)
 
@@ -55,8 +55,14 @@ if __name__ == '__main__':
             # Replace the target string
             filedata = filedata.replace(working_name, snapshot_name)
             filedata = filedata.replace(debug_verbose_on, debug_verbose_off)
-            filedata = filedata.replace(local_resign_off, local_resign_on)
-            # filedata = filedata.replace(resign_on, resign_off)
+
+            if args.submission:
+                filedata = filedata.replace(local_resign_on, local_resign_off)
+                filedata = filedata.replace(resign_on, resign_off)
+                filedata = filedata.replace(assert_on, assert_off)
+            else:
+                filedata = filedata.replace(local_resign_off, local_resign_on)
+                # filedata = filedata.replace(resign_off, resign_on)
 
             # Write the file out again
             with open(file_path, 'w') as new_file:

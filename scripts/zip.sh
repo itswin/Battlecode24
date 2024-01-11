@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
+./scripts/snap.py MPSubmit --submission
 cd src
-zip -r MPWorking.zip MPWorking/*
-mv MPWorking.zip ../
+zip -r MPSubmit.zip MPSubmit/*
+mv MPSubmit.zip ../
+rm -rf MPSubmit
 cd ..
