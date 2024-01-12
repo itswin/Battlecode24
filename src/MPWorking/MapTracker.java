@@ -494,7 +494,7 @@ public class MapTracker {
                 break;
         }
 
-        Debug.println("Valid symmetries: " + validSymmetries, id);
+        // Debug.println("Valid symmetries: " + validSymmetries, id);
 
         int otherTileType;
         if ((validSymmetries & Util.SymmetryType.HORIZONTAL) != 0) {

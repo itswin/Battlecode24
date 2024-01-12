@@ -309,6 +309,11 @@ public class Util {
         }
     }
 
+    static Direction[] getInOrderDirectionsCenter(Direction target_dir) {
+        return new Direction[] { target_dir, target_dir.rotateRight(), target_dir.rotateLeft(),
+                Direction.CENTER, target_dir.rotateRight().rotateRight(), target_dir.rotateLeft().rotateLeft() };
+    }
+
     static Direction getFirstValidInOrderDirection(Direction dir) {
         for (Direction newDir : Util.getInOrderDirections(dir)) {
             if (rc.canMove(newDir)) {

@@ -97,6 +97,9 @@ public class Duck extends Robot {
                 formHull();
                 break;
         }
+
+        if (currState != State.SETUP && MicroDuck.apply())
+            return;
     }
 
     public void fillWater() throws GameActionException {
