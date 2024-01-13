@@ -13,6 +13,9 @@ public class MicroDuck {
     static final int OVERWHELMING_RATIO = 4;
     static final int TRAP_SENSE_RADIUS = 13;
 
+    static int STUN_TRAP_COST;
+    static int EXPLOSIVE_TRAP_COST;
+
     static final Direction[] dirs = {
             Direction.NORTH,
             Direction.NORTHWEST,
@@ -39,10 +42,12 @@ public class MicroDuck {
     static double currentActionRadius;
     static double currentExtendedActionRadius;
     static boolean canAttack;
+    static boolean canBuildTraps;
     static boolean canBuildStunTrap;
     static boolean canBuildExplosiveTrap;
     static boolean canGlobalMove;
     static MapLocation currentLoc;
+    static MapInfo currentInfo;
     static RobotInfo currentUnit;
     static int numDucks;
     static boolean overwhelming;
@@ -80,9 +85,17 @@ public class MicroDuck {
         return Math.round(base_heal * ((float) SkillType.HEAL.getSkillEffect(rc.getLevel(SkillType.HEAL)) / 100 + 1));
     }
 
+    static int getTrapCost(TrapType type) {
+        int cost = type.buildCost;
+        Math.round(cost * ((float) SkillType.BUILD.getSkillEffect(rc.getLevel(SkillType.BUILD)) / 100 + 1));
+        return cost;
+    }
+
     static void calcConstants() {
         DAMAGE = getDamage();
         HEAL = getHeal();
+        STUN_TRAP_COST = getTrapCost(TrapType.STUN);
+        EXPLOSIVE_TRAP_COST = getTrapCost(TrapType.EXPLOSIVE);
     }
 
     static boolean doMicro() throws GameActionException {
@@ -97,8 +110,8 @@ public class MicroDuck {
         calcConstants();
 
         canAttack = rc.isActionReady();
-        canBuildStunTrap = rc.getCrumbs() >= TrapType.STUN.buildCost && canAttack;
-        canBuildExplosiveTrap = rc.getCrumbs() >= TrapType.EXPLOSIVE.buildCost && canAttack;
+        canBuildStunTrap = canBuildTraps && rc.getCrumbs() >= STUN_TRAP_COST && canAttack;
+        canBuildExplosiveTrap = canBuildTraps && rc.getCrumbs() >= EXPLOSIVE_TRAP_COST && canAttack;
         canGlobalMove = allowMovement && rc.isMovementReady();
         numDucks = 0;
         seesAllyFlagHolder = false;
@@ -129,6 +142,8 @@ public class MicroDuck {
             currentLoc = currentUnit.getLocation();
             if (currentUnit.hasFlag)
                 seesEnemyFlagHolder = true;
+
+            currentInfo = rc.senseMapInfo(currentLoc);
 
             // if (Bfs.existsPathTo(currentLoc))
             // isThreatened = true;
@@ -208,7 +223,7 @@ public class MicroDuck {
             return true;
         }
 
-        i = 8;
+        i = 9;
         for (; --i >= 0;) {
             microInfo[i].loadActionScore();
         }
@@ -340,9 +355,9 @@ public class MicroDuck {
     }
 
     static boolean applyAttack(MicroInfo bestMicro) throws GameActionException {
-        // We probably don't want the same unit building 2 traps in a single turn.
         if (!rc.isActionReady() || appliedAttack || bestMicro.actionScore == 0)
             return false;
+        // We probably don't want the same unit building 2 traps in a single turn.
         final int SCALAR = 100000;
         int[] scores = {
                 (int) (bestMicro.enemyDamageScore * SCALAR),
@@ -472,6 +487,9 @@ public class MicroDuck {
                     damageScore = 2 * DAMAGE / health / SkillType.ATTACK.cooldown;
                     // 2 * 150 / 800 / 20 = 0.009
                 }
+
+                if (currentInfo.getTeamTerritory() == Robot.opponent)
+                    damageScore *= 2;
 
                 // Kill flag holders
                 if (currentUnit.hasFlag)
@@ -649,6 +667,10 @@ public class MicroDuck {
             MapLocation loc;
             for (Direction dirToTrap : Util.getInOrderDirectionsCenter(centralDir)) {
                 loc = rc.adjacentLocation(dirToTrap);
+                // TODO: OPTIMIZE
+                if (Util.isAdjacentToTrap(loc))
+                    continue;
+
                 if (rc.canBuild(TrapType.STUN, loc)) {
                     rc.build(TrapType.STUN, loc);
                     Debug.setIndicatorDot(loc, 255, 100, 5);
@@ -670,6 +692,10 @@ public class MicroDuck {
             MapLocation loc;
             for (Direction dirToTrap : Util.getInOrderDirectionsCenter(centralDir)) {
                 loc = rc.adjacentLocation(dirToTrap);
+                // TODO: OPTIMIZE
+                // if (Util.isAdjacentToTrap(loc))
+                // continue;
+
                 if (rc.canBuild(TrapType.EXPLOSIVE, loc)) {
                     rc.build(TrapType.EXPLOSIVE, loc);
                     Debug.setIndicatorDot(loc, 255, 100, 5);

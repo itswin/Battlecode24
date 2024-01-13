@@ -456,7 +456,12 @@ public class Util {
         return bestLoc;
     }
 
-    static boolean isDamLoc(MapInfo info) throws GameActionException {
-        return !info.isPassable() && !info.isWall() && !info.isWater();
+    public static boolean isAdjacentToTrap(MapLocation loc) throws GameActionException {
+        MapInfo[] adjacentLocs = rc.senseNearbyMapInfos(loc, 2);
+        for (MapInfo info : adjacentLocs) {
+            if (info.getTrapType() != TrapType.NONE)
+                return true;
+        }
+        return false;
     }
 }

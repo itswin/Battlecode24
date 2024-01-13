@@ -41,8 +41,24 @@ public strictfp class RobotPlayer {
         MicroDuck.init(rc);
         RobotPlayer.rc = rc;
 
-        // You can also use indicators to save debug notes in replays.
-        bot = new Duck(rc);
+        int lastUnitNum = Comms.readUnitNum();
+        Robot.unitNum = lastUnitNum + 1;
+        Comms.writeUnitNum(Robot.unitNum);
+        Debug.println("I am unit number: " + Robot.unitNum);
+
+        switch (Robot.unitNum) {
+            case 10:
+            case 11:
+            case 12:
+                bot = new BuilderDuck(rc);
+                MicroDuck.canBuildTraps = true;
+                break;
+            default:
+                bot = new Duck(rc);
+                MicroDuck.canBuildTraps = false;
+                break;
+        }
+
         while (true) {
             try {
                 bot.initTurn();
@@ -73,7 +89,7 @@ public strictfp class RobotPlayer {
     }
 
     public static void localResign() throws GameActionException {
-        if (rc.getRoundNum() > 400) {
+        if (rc.getRoundNum() > 500) {
             rc.resign();
         }
     }

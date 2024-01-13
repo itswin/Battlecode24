@@ -161,18 +161,9 @@ public class Robot {
                 Explore.init(rc);
 
                 if (!spawned) {
-                    int lastUnitNum = Comms.readUnitNum();
-                    unitNum = lastUnitNum + 1;
-                    Comms.writeUnitNum(unitNum);
-                    Debug.println("I am unit number: " + unitNum);
                     spawned = true;
                     Explore.assignExplore3Dir(Explore.EXPLORE_DIRECTIONS[unitNum % Explore.EXPLORE_DIRECTIONS.length]);
                     writeFlagLocs();
-
-                    // for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(rc.getLocation(), -1)) {
-                    //     Debug.println("Loc: " + loc + ". " + rc.canBuild(TrapType.STUN, loc));
-                    // }
-                    // rc.resign();
                 }
             } else {
                 return false;
@@ -2005,5 +1996,56 @@ public class Robot {
             // is a part of. But that seems a little risky.
             seenSymmetricLocs.add(target);
         }
+    }
+
+    public void fillWater() throws GameActionException {
+        if (!rc.isActionReady())
+            return;
+
+        MapInfo[] mapInfos = rc.senseNearbyMapInfos(rc.getLocation(), GameConstants.INTERACT_RADIUS_SQUARED);
+        for (MapInfo info : mapInfos) {
+            if (info.isWater() && rc.canFill(info.getMapLocation())) {
+                rc.fill(info.getMapLocation());
+                return;
+            }
+        }
+    }
+
+    public void digHole() throws GameActionException {
+        if (!rc.isActionReady())
+            return;
+
+        for (MapLocation loc : rc.getAllLocationsWithinRadiusSquared(rc.getLocation(),
+                GameConstants.INTERACT_RADIUS_SQUARED)) {
+            if (rc.canDig(loc)) {
+                rc.dig(loc);
+                return;
+            }
+        }
+    }
+
+    public void formHull() throws GameActionException {
+        if (lastClosestEnemy == null)
+            return;
+
+        // We want to form a hull around the last closest attacking enemy
+        // To do this, we pref to move to the location closest to the loc which
+        // is NOT in vision radius of the location
+        int bestDist = Integer.MAX_VALUE;
+        Direction bestDir = Direction.CENTER;
+        MapLocation loc;
+        int dist;
+        for (Direction dir : Util.directions) {
+            loc = lastClosestEnemy.add(dir);
+            dist = currLoc.distanceSquaredTo(loc);
+            if (loc.isWithinDistanceSquared(lastClosestEnemy, visionRadiusSquared))
+                continue;
+            if (dist < bestDist) {
+                bestDist = dist;
+                bestDir = dir;
+            }
+        }
+
+        Nav.move(currLoc.add(bestDir), true);
     }
 }
