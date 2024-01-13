@@ -110,7 +110,7 @@ public class MicroDuck {
         calcConstants();
 
         canAttack = rc.isActionReady();
-        canBuildStunTrap = canBuildTraps && rc.getCrumbs() >= STUN_TRAP_COST && canAttack;
+        canBuildStunTrap = canBuildTraps && rc.getCrumbs() >= STUN_TRAP_COST && canAttack && false;
         canBuildExplosiveTrap = canBuildTraps && rc.getCrumbs() >= EXPLOSIVE_TRAP_COST && canAttack;
         canGlobalMove = allowMovement && rc.isMovementReady();
         numDucks = 0;
@@ -186,7 +186,7 @@ public class MicroDuck {
         }
 
         MapInfo info;
-        MapInfo[] infos = rc.senseNearbyMapInfos(currentLoc, TRAP_SENSE_RADIUS);
+        MapInfo[] infos = rc.senseNearbyMapInfos(rc.getLocation(), TRAP_SENSE_RADIUS);
         for (i = infos.length; --i >= 0;) {
             info = infos[i];
             if (info.getTrapType() != TrapType.NONE) {
@@ -382,6 +382,8 @@ public class MicroDuck {
 
         Direction dir;
         MapLocation location;
+        MapInfo info;
+        boolean isEnemyTerritory;
         int minDistanceToEnemy = INF;
 
         // These are AOE and are summed over all enemies.
@@ -412,11 +414,18 @@ public class MicroDuck {
 
         int distToBehindTrap = INF;
 
-        public MicroInfo(Direction dir) {
-            this.dir = dir;
-            this.location = rc.adjacentLocation(dir);
+        public MicroInfo(Direction d) {
+            dir = d;
+            location = rc.adjacentLocation(dir);
             if (dir != Direction.CENTER && !rc.canMove(dir))
                 canMove = false;
+            try {
+                info = rc.senseMapInfo(location);
+                isEnemyTerritory = info.getTeamTerritory() == Robot.opponent;
+            } catch (GameActionException e) {
+                e.printStackTrace();
+                isEnemyTerritory = false;
+            }
         }
 
         public String toString() {
@@ -488,7 +497,7 @@ public class MicroDuck {
                     // 2 * 150 / 800 / 20 = 0.009
                 }
 
-                if (currentInfo.getTeamTerritory() == Robot.opponent)
+                if (isEnemyTerritory)
                     damageScore *= 2;
 
                 // Kill flag holders

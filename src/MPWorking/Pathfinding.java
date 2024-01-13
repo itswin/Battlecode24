@@ -122,7 +122,7 @@ public class Pathfinding {
         static int minDistToEnemy = INF; // minimum distance I've been to the enemy while going around an obstacle
         static MapLocation prevTarget = null; // previous target
         static FastIntSet visited = new FastIntSet();
-        static int id = 12620;
+        static int id = 10841;
 
         static boolean move() {
             try {
@@ -175,20 +175,10 @@ public class Pathfinding {
                 // the middle of the loop. (It can be done more efficiently)
                 for (int i = 8; i-- > 0;) {
                     MapLocation newLoc = myLoc.add(dir);
-                    if (rc.canSenseLocation(newLoc)) {
-                        // MapInfo info = rc.senseMapInfo(newLoc);
-                        // MapInfo currInfo = rc.senseMapInfo(myLoc);
-                        int nextCooldown = rc.getMovementCooldownTurns()
-                                + (int) (getBaseMovementCooldown());
-                        if (nextCooldown >= GameConstants.COOLDOWN_LIMIT) {
-                            lastObstacleFound = newLoc;
-                        }
-
-                        if (canMove(dir)) {
-                            rc.move(dir);
-                            // Debug.println("Moving in dir: " + dir, id);
-                            return true;
-                        }
+                    if (canMove(dir)) {
+                        rc.move(dir);
+                        // Debug.println("Moving in dir: " + dir, id);
+                        return true;
                     }
 
                     if (!rc.onTheMap(newLoc)) {
