@@ -89,6 +89,7 @@ public class Duck extends Robot {
                 doExplore();
                 break;
             case CAPTURING_FLAG:
+                fillWater();
                 doCapture();
                 break;
             case WAITING:

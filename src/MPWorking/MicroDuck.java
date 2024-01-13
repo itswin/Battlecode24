@@ -419,12 +419,15 @@ public class MicroDuck {
             location = rc.adjacentLocation(dir);
             if (dir != Direction.CENTER && !rc.canMove(dir))
                 canMove = false;
-            try {
-                info = rc.senseMapInfo(location);
-                isEnemyTerritory = info.getTeamTerritory() == Robot.opponent;
-            } catch (GameActionException e) {
-                e.printStackTrace();
-                isEnemyTerritory = false;
+
+            if (rc.onTheMap(location)) {
+                try {
+                    info = rc.senseMapInfo(location);
+                    isEnemyTerritory = info.getTeamTerritory() == Robot.opponent;
+                } catch (GameActionException e) {
+                    e.printStackTrace();
+                    isEnemyTerritory = false;
+                }
             }
         }
 

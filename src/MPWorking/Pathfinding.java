@@ -122,13 +122,13 @@ public class Pathfinding {
         static int minDistToEnemy = INF; // minimum distance I've been to the enemy while going around an obstacle
         static MapLocation prevTarget = null; // previous target
         static FastIntSet visited = new FastIntSet();
-        static int id = 10841;
+        static int id = 10136;
 
         static boolean move() {
             try {
                 // different target? ==> previous data does not help!
                 if (prevTarget == null || target.distanceSquaredTo(prevTarget) > 0) {
-                    // Debug.println("New target: " + target, id);
+                    Debug.println(Debug.PATHFINDING, "New target: " + target, id);
                     resetPathfinding();
                 }
 
@@ -137,7 +137,7 @@ public class Pathfinding {
                 // int d = myLoc.distanceSquaredTo(target);
                 int d = Util.distance(myLoc, target);
                 if (d < minDistToEnemy) {
-                    // Debug.println("New min dist: " + d + " Old: " + minDistToEnemy, id);
+                    Debug.println(Debug.PATHFINDING, "New min dist: " + d + " Old: " + minDistToEnemy, id);
                     resetPathfinding();
                     minDistToEnemy = d;
                 }
@@ -145,7 +145,7 @@ public class Pathfinding {
                 int code = getCode();
 
                 if (visited.contains(code)) {
-                    // Debug.println("Contains code", id);
+                    Debug.println(Debug.PATHFINDING, "Contains code", id);
                     resetPathfinding();
                 }
                 visited.add(code);
@@ -157,7 +157,7 @@ public class Pathfinding {
                 // going to the target directly
                 Direction dir = myLoc.directionTo(target);
                 if (lastObstacleFound != null) {
-                    // Debug.println("Last obstacle found: " + lastObstacleFound, id);
+                    Debug.println(Debug.PATHFINDING, "Last obstacle found: " + lastObstacleFound, id);
                     dir = myLoc.directionTo(lastObstacleFound);
                 }
                 MapLocation nextLoc = myLoc.add(dir);
@@ -165,7 +165,7 @@ public class Pathfinding {
                     impassable[dir.ordinal()] = true;
                 }
                 if (canMove(dir)) {
-                    // Debug.println("can move: " + dir, id);
+                    Debug.println(Debug.PATHFINDING, "can move: " + dir, id);
                     resetPathfinding();
                 }
 
@@ -177,37 +177,38 @@ public class Pathfinding {
                     MapLocation newLoc = myLoc.add(dir);
                     if (canMove(dir)) {
                         rc.move(dir);
-                        // Debug.println("Moving in dir: " + dir, id);
+                        Debug.println(Debug.PATHFINDING, "Moving in dir: " + dir, id);
                         return true;
                     }
 
                     if (!rc.onTheMap(newLoc)) {
                         rotateRight = !rotateRight;
+                        Debug.println(Debug.PATHFINDING, "Swapping rot. Not on the map: " + newLoc, id);
                     } else if (!rc.sensePassability(newLoc)) {
                         // This is the latest obstacle found if
                         // - I can't move there
                         // - It's on the map
                         // - It's not passable
                         lastObstacleFound = newLoc;
-                        // Debug.println("Found obstacle: " + lastObstacleFound, id);
+                        Debug.println(Debug.PATHFINDING, "Found obstacle: " + lastObstacleFound, id);
 
                         if (shouldGuessRotation) {
-                            // Debug.println("Inferring rot dir around: " + lastObstacleFound, id);
+                            Debug.println(Debug.PATHFINDING, "Inferring rot dir around: " + lastObstacleFound, id);
                             if (MapTracker.canInferRotationAroundObstacle(lastObstacleFound)) {
                                 shouldGuessRotation = false;
                                 if (!MapTracker.isAdjacentToPOI(myLoc, lastObstacleFound)) {
                                     rotateRight = MapTracker.shouldRotateRightAroundObstacle(
                                             lastObstacleFound, myLoc, target);
                                 }
-                                // Debug.println("Inferred: " + rotateRight, id);
+                                Debug.println(Debug.PATHFINDING, "Inferred: " + rotateRight, id);
+                            } else {
+                                rotateRight = !rotateRight;
                             }
-                        } else {
-                            rotateRight = !rotateRight;
                         }
                     } else if (shouldGuessRotation) {
                         // Guessing rotation not on an obstacle is different.
                         shouldGuessRotation = false;
-                        // Debug.println("Guessing rot dir", id);
+                        Debug.println(Debug.PATHFINDING, "Guessing rot dir", id);
                         // Rotate left and right and find the first dir that you can move in
                         Direction dirL = dir;
                         for (int j = 8; j-- > 0;) {
@@ -240,7 +241,7 @@ public class Pathfinding {
                             rotateRight = rDistSq < lDistSq;
                         }
 
-                        // Debug.println("Guessed: " + rotateRight, id);
+                        Debug.println(Debug.PATHFINDING, "Guessed: " + rotateRight, id);
                     }
 
                     if (rotateRight)
@@ -256,7 +257,7 @@ public class Pathfinding {
             Exception e) {
                 e.printStackTrace();
             }
-            // Debug.println("Last exit", id);
+            Debug.println(Debug.PATHFINDING, "Last exit", id);
             return true;
         }
 

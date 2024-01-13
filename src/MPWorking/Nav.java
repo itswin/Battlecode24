@@ -18,7 +18,7 @@ public class Nav {
 
     static final int GREEDY_TURNS = 4;
 
-    static final int id = 13175;
+    static final int id = 10136;
 
     // public static final int BFS34_COST = 6000;
     public static final int BFS20_COST = 4000;
@@ -243,7 +243,7 @@ public class Nav {
 
         if (Clock.getBytecodesLeft() >= BYTECODE_REMAINING) {
             Debug.println(Debug.PATHFINDING,
-                    "getBestDir failed to get closer in 2 turns: Falling back to bugNav");
+                    "getBestDir failed to get closer in 2 turns: Falling back to bugNav", id);
             Pathfinding.move(target);
         } else {
             Debug.setIndicatorDot(true, rc.getLocation(), 255, 255, 255);

@@ -89,7 +89,7 @@ public strictfp class RobotPlayer {
     }
 
     public static void localResign() throws GameActionException {
-        if (rc.getRoundNum() > 800) {
+        if (rc.getRoundNum() > 340) {
             rc.resign();
         }
     }
