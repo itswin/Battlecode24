@@ -210,7 +210,7 @@ public class Duck extends Robot {
         if (rc.getCrumbs() < TrapType.EXPLOSIVE.buildCost)
             return TrapType.STUN;
 
-        if (FastMath.rand256() % 3 == 0)
+        if (FastMath.rand256() % 2 == 0)
             return TrapType.EXPLOSIVE;
         else
             return TrapType.STUN;

@@ -11,6 +11,7 @@ public class MicroDuck {
     static final int STUN_BUILD_RANGE_EXTENDED = 13;
     static final int EXPLOSIVE_BUILD_RANGE_EXTENDED = 8;
     static final int OVERWHELMING_RATIO = 4;
+    static final int TRAP_SENSE_RADIUS = 13;
 
     static final Direction[] dirs = {
             Direction.NORTH,
@@ -46,7 +47,18 @@ public class MicroDuck {
     static int numDucks;
     static boolean overwhelming;
     static boolean seesAllyFlagHolder;
+    static boolean seesEnemyFlagHolder;
     static boolean appliedAttack;
+
+    static float avgEnemyX;
+    static float avgEnemyY;
+    static int numEnemies;
+
+    static float avgTrapX;
+    static float avgTrapY;
+    static int numTraps;
+
+    static MapLocation behindTrapLoc;
 
     static float DAMAGE;
     static float HEAL;
@@ -90,6 +102,7 @@ public class MicroDuck {
         canGlobalMove = allowMovement && rc.isMovementReady();
         numDucks = 0;
         seesAllyFlagHolder = false;
+        seesEnemyFlagHolder = false;
         appliedAttack = false;
 
         microInfo = new MicroInfo[9];
@@ -105,14 +118,17 @@ public class MicroDuck {
             Debug.printString("OVERWHELMING");
         }
 
-        boolean isThreatened = true;
+        // boolean isThreatened = true;
         i = units.length;
+        numEnemies = i;
 
         for (; --i >= 0;) {
             if (Clock.getBytecodesLeft() < MAX_MICRO_BYTECODE_REMAINING)
                 break;
             currentUnit = units[i];
             currentLoc = currentUnit.getLocation();
+            if (currentUnit.hasFlag)
+                seesEnemyFlagHolder = true;
 
             // if (Bfs.existsPathTo(currentLoc))
             // isThreatened = true;
@@ -130,8 +146,8 @@ public class MicroDuck {
             microInfo[8].updateEnemy();
         }
 
-        if (!isThreatened)
-            return false;
+        // if (!isThreatened)
+        // return false;
 
         units = Robot.allies;
         i = units.length;
@@ -152,6 +168,34 @@ public class MicroDuck {
             microInfo[6].updateAlly();
             microInfo[7].updateAlly();
             microInfo[8].updateAlly();
+        }
+
+        MapInfo info;
+        MapInfo[] infos = rc.senseNearbyMapInfos(currentLoc, TRAP_SENSE_RADIUS);
+        for (i = infos.length; --i >= 0;) {
+            info = infos[i];
+            if (info.getTrapType() != TrapType.NONE) {
+                avgTrapX = (avgTrapX * numTraps + info.getMapLocation().x) / (numTraps + 1);
+                avgTrapY = (avgTrapY * numTraps + info.getMapLocation().y) / (numTraps + 1);
+            }
+        }
+
+        if (numTraps == 0) {
+            behindTrapLoc = null;
+        } else if (numEnemies > 0) {
+            float dx = avgEnemyX - avgTrapX;
+            float dy = avgEnemyY - avgTrapY;
+            behindTrapLoc = new MapLocation((int) (avgTrapX - dx), (int) (avgTrapY - dy));
+
+            microInfo[8].distToBehindTrap = microInfo[8].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[7].distToBehindTrap = microInfo[7].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[6].distToBehindTrap = microInfo[6].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[5].distToBehindTrap = microInfo[5].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[4].distToBehindTrap = microInfo[4].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[3].distToBehindTrap = microInfo[3].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[2].distToBehindTrap = microInfo[2].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[1].distToBehindTrap = microInfo[1].location.distanceSquaredTo(behindTrapLoc);
+            microInfo[0].distToBehindTrap = microInfo[0].location.distanceSquaredTo(behindTrapLoc);
         }
 
         // If you can't move, we have to choose the zero micro.
@@ -187,10 +231,10 @@ public class MicroDuck {
                 }
             }
 
-            if (isZeroBestAttack) {
+            if (isZeroBestAttack && bestMicro.actionScore > 0) {
                 applyAttack(bestMicro);
-                // Ignore the zero direction's attack scores
-                bestMicro.enemyDamageScore = 0;
+                // Ignore the zero direction's action scores
+                bestMicro.actionScore = 0;
             }
         }
 
@@ -200,6 +244,16 @@ public class MicroDuck {
         for (; --i >= 0;) {
             if (microInfo[i].isBetter(bestMicro))
                 bestMicro = microInfo[i];
+        }
+
+        // If you have no action score, what you even doing here
+        if (bestMicro.actionScore == 0 && !(seesAllyFlagHolder || seesEnemyFlagHolder)) {
+            // If the chosen micro has no action score, but the zero micro does,
+            // apply the zero micro's attack.
+            if (microInfo[8].actionScore > 0) {
+                applyAttack(microInfo[8]);
+            }
+            return false;
         }
 
         apply(bestMicro);
@@ -287,9 +341,9 @@ public class MicroDuck {
 
     static boolean applyAttack(MicroInfo bestMicro) throws GameActionException {
         // We probably don't want the same unit building 2 traps in a single turn.
-        if (appliedAttack)
+        if (!rc.isActionReady() || appliedAttack || bestMicro.actionScore == 0)
             return false;
-        final int SCALAR = 1000;
+        final int SCALAR = 100000;
         int[] scores = {
                 (int) (bestMicro.enemyDamageScore * SCALAR),
                 (int) (bestMicro.allyHealScore * SCALAR),
@@ -297,9 +351,11 @@ public class MicroDuck {
                 (int) (bestMicro.enemyExplosiveScore * SCALAR),
         };
 
+        Debug.println("Scores: " + scores[0] + " " + scores[1] + " " + scores[2] + " " + scores[3]);
+
         appliedAttack = true;
         FastSort.sort(scores);
-        for (int i = 0; i < FastSort.size; i++) {
+        for (int i = 4; --i >= 0;) {
             if (doActionNumber(FastSort.indices[i], bestMicro))
                 return true;
         }
@@ -307,7 +363,7 @@ public class MicroDuck {
     }
 
     static class MicroInfo {
-        static final float STUN_SCORE_PER_ENEMY = 0.25f;
+        static final float STUN_SCORE_PER_ENEMY = 0.1f;
 
         Direction dir;
         MapLocation location;
@@ -337,12 +393,27 @@ public class MicroDuck {
         int distToEnemyFlagHolder = INF;
 
         float actionScore = 0;
+        float dangerScore = 0;
+
+        int distToBehindTrap = INF;
 
         public MicroInfo(Direction dir) {
             this.dir = dir;
             this.location = rc.adjacentLocation(dir);
             if (dir != Direction.CENTER && !rc.canMove(dir))
                 canMove = false;
+        }
+
+        public String toString() {
+            return "MicroInfo: " + "(dir," + dir + ") " + "(loc," + location + ") " + "(minDist," + minDistanceToEnemy
+                    + ") " + "(actionScore," + actionScore + ") " + "(stunScore," + enemyStunScore + ") "
+                    + "(explosiveScore," + enemyExplosiveScore + ") "
+                    + "(damageScore," + enemyDamageScore + ") " + "(healScore," + allyHealScore + ") "
+                    + "(ducksAttackRange," + ducksAttackRange + ") " + "(possibleEnemyDucks," + possibleEnemyDucks
+                    + ") " + "(minDistToAlly," + minDistToAlly + ") " + "(canMove," + canMove + ") " + "(isSupported,"
+                    + isSupported + ") " + "(distToAllyFlagHolder," + distToAllyFlagHolder + ") "
+                    + "(distToEnemyFlagHolder," + distToEnemyFlagHolder + ") " + "(actionScore," + actionScore + ") "
+                    + "(distToBehindTrap," + distToBehindTrap + ")";
         }
 
         void updateEnemy() {
@@ -398,7 +469,8 @@ public class MicroDuck {
                 } else {
                     // Reward dealing greater percent damage
                     // Range 0 to 1
-                    damageScore = DAMAGE / health / SkillType.ATTACK.cooldown;
+                    damageScore = 2 * DAMAGE / health / SkillType.ATTACK.cooldown;
+                    // 2 * 150 / 800 / 20 = 0.009
                 }
 
                 // Kill flag holders
@@ -426,13 +498,13 @@ public class MicroDuck {
                 int currentUnitHealth = currentUnit.getHealth();
                 if (currentUnitHealth < GameConstants.DEFAULT_HEALTH - HEAL) {
                     float healScore = HEAL / currentUnitHealth / SkillType.HEAL.cooldown;
-                    // 80 / 500
+                    // 80 / 500 / 30 = 0.00533
                     // Reward saving a unit's life.
                     if (currentUnitHealth <= DAMAGE)
                         healScore += 2;
                     // Reward healing a unit with a flag.
                     if (currentUnit.hasFlag)
-                        healScore += 1;
+                        healScore += 10;
                     if (healScore > allyHealScore) {
                         allyHealScore = healScore;
                         allyTarget = currentLoc;
@@ -452,6 +524,8 @@ public class MicroDuck {
         void loadActionScore() {
             actionScore = Math.max(enemyDamageScore,
                     Math.max(allyHealScore, Math.max(enemyStunScore, enemyExplosiveScore)));
+            dangerScore = ducksAttackRange * DAMAGE / SkillType.ATTACK.cooldown;
+            dangerScore += possibleEnemyDucks * DAMAGE / SkillType.ATTACK.cooldown / 2;
         }
 
         // equal => true
@@ -459,11 +533,6 @@ public class MicroDuck {
             if (canMove && !M.canMove)
                 return true;
             if (!canMove && M.canMove)
-                return false;
-
-            if (actionScore > M.actionScore)
-                return true;
-            if (actionScore < M.actionScore)
                 return false;
 
             // Should we prioritize defending our flag holder or the enemy flag holder?
@@ -502,9 +571,21 @@ public class MicroDuck {
                 return false;
 
             if (!overwhelming) {
+                // if (!canAttack) {
+                // if (distToBehindTrap < M.distToBehindTrap)
+                // return true;
+                // if (distToBehindTrap > M.distToBehindTrap)
+                // return false;
+                // }
+
                 if (ducksAttackRange < M.ducksAttackRange)
                     return true;
                 if (ducksAttackRange > M.ducksAttackRange)
+                    return false;
+
+                if (actionScore > M.actionScore)
+                    return true;
+                if (actionScore < M.actionScore)
                     return false;
 
                 if (possibleEnemyDucks < M.possibleEnemyDucks)
@@ -522,6 +603,11 @@ public class MicroDuck {
                 else
                     return minDistanceToEnemy <= M.minDistanceToEnemy;
             } else {
+                if (actionScore > M.actionScore)
+                    return true;
+                if (actionScore < M.actionScore)
+                    return false;
+
                 // Go closer if we have a unit majority
                 return minDistanceToEnemy <= M.minDistanceToEnemy;
             }
@@ -536,6 +622,7 @@ public class MicroDuck {
                 return false;
             if (rc.canAttack(enemyTarget)) {
                 rc.attack(enemyTarget);
+                Debug.println("A: " + enemyTarget);
                 return true;
             }
             Debug.println("Couldn't attack: " + enemyTarget);
@@ -547,6 +634,7 @@ public class MicroDuck {
                 return false;
             if (rc.canHeal(allyTarget)) {
                 rc.heal(allyTarget);
+                Debug.println("H: " + allyTarget);
                 return true;
             }
             Debug.println("Couldn't heal: " + allyTarget);
@@ -564,7 +652,7 @@ public class MicroDuck {
                 if (rc.canBuild(TrapType.STUN, loc)) {
                     rc.build(TrapType.STUN, loc);
                     Debug.setIndicatorDot(loc, 255, 100, 5);
-                    Debug.println("built stun trap at: " + loc);
+                    Debug.println("ST: " + loc);
                     return true;
                 }
             }
@@ -585,7 +673,7 @@ public class MicroDuck {
                 if (rc.canBuild(TrapType.EXPLOSIVE, loc)) {
                     rc.build(TrapType.EXPLOSIVE, loc);
                     Debug.setIndicatorDot(loc, 255, 100, 5);
-                    Debug.println("built exp trap at: " + loc);
+                    Debug.println("ET: " + loc);
                     return true;
                 }
             }
