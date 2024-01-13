@@ -153,19 +153,18 @@ public class Robot {
     public boolean takeTurn() throws GameActionException {
         turnCount += 1;
         if (!rc.isSpawned()) {
-            MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+            MapLocation spawnLoc = getSpawnLocation();
             // Pick a random spawn location to attempt spawning in.
-            MapLocation randomLoc = spawnLocs[FastMath.nextInt(spawnLocs.length)];
-            if (rc.canSpawn(randomLoc)) {
-                rc.spawn(randomLoc);
-                Explore.init(rc);
-
+            if (rc.canSpawn(spawnLoc)) {
+                rc.spawn(spawnLoc);
                 if (!spawned) {
                     spawned = true;
+                    Explore.init(rc);
                     Explore.assignExplore3Dir(Explore.EXPLORE_DIRECTIONS[unitNum % Explore.EXPLORE_DIRECTIONS.length]);
                     writeFlagLocs();
                 }
             } else {
+                doUnitNumSpecificTasks();
                 return false;
             }
         }
@@ -178,8 +177,8 @@ public class Robot {
         allies = rc.senseNearbyRobots(-1, rc.getTeam());
         currLoc = rc.getLocation();
         Debug.setIndicatorDot(Debug.INDICATORS, home, 0, 255, 0);
-        setSectorStates();
         resetLocalEnemyInformation();
+        setSectorStates();
 
         // Must recalculate
         int currSymmetryAll = Util.getValidSymmetries();
@@ -191,6 +190,63 @@ public class Robot {
         }
 
         return true;
+    }
+
+    public MapLocation getRandomSpawnLoc() throws GameActionException {
+        MapLocation[] spawnLocs = rc.getAllySpawnLocations();
+        return spawnLocs[FastMath.rand256() % spawnLocs.length];
+    }
+
+    public MapLocation getSpawnLocation() throws GameActionException {
+        if (spawnLocations == null)
+            return getRandomSpawnLoc();
+
+        // One in 5 ducks should respawn at a random loc just to check
+        if (FastMath.rand256() % 5 == 0)
+            return getRandomSpawnLoc();
+
+        assert spawnLocations.length == 3;
+        assert spawnLocations[0] != null;
+        assert spawnLocations[1] != null;
+        assert spawnLocations[2] != null;
+
+        int combatSector0 = getNearestCombatSector(spawnLocations[0]);
+        int combatSector1 = getNearestCombatSector(spawnLocations[1]);
+        int combatSector2 = getNearestCombatSector(spawnLocations[2]);
+
+        // Find the spawn loc closest to a combat sector.
+        MapLocation spawnLoc0Combat = combatSector0 == Comms.UNDEFINED_SECTOR_INDEX ? null
+                : sectorCenters[combatSector0];
+        MapLocation spawnLoc1Combat = combatSector1 == Comms.UNDEFINED_SECTOR_INDEX ? null
+                : sectorCenters[combatSector1];
+        MapLocation spawnLoc2Combat = combatSector2 == Comms.UNDEFINED_SECTOR_INDEX ? null
+                : sectorCenters[combatSector2];
+
+        int dist1 = spawnLoc0Combat == null ? Integer.MAX_VALUE : spawnLoc0Combat.distanceSquaredTo(spawnLocations[0]);
+        int dist2 = spawnLoc1Combat == null ? Integer.MAX_VALUE : spawnLoc1Combat.distanceSquaredTo(spawnLocations[1]);
+        int dist3 = spawnLoc2Combat == null ? Integer.MAX_VALUE : spawnLoc2Combat.distanceSquaredTo(spawnLocations[2]);
+
+        if (dist1 == Integer.MAX_VALUE && dist2 == Integer.MAX_VALUE && dist3 == Integer.MAX_VALUE) {
+            return getRandomSpawnLoc();
+        }
+
+        MapLocation spawnLocCenter = null;
+        if (dist1 <= dist2 && dist1 <= dist3) {
+            spawnLocCenter = spawnLocations[0];
+        } else if (dist2 <= dist1 && dist2 <= dist3) {
+            spawnLocCenter = spawnLocations[1];
+        } else {
+            spawnLocCenter = spawnLocations[2];
+        }
+
+        for (Direction dir : Util.DIRS_CENTER) {
+            MapLocation spawnLoc = spawnLocCenter.add(dir);
+            if (rc.canSpawn(spawnLoc)) {
+                return spawnLoc;
+            }
+        }
+
+        return getRandomSpawnLoc();
     }
 
     public void doUnitNumSpecificTasks() throws GameActionException {
