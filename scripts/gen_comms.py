@@ -68,6 +68,13 @@ SCHEMA = {
             'rotational': 1,
         }
     },
+    'next_builder': {
+        'slots': 1,
+        'bits': {
+            'unit_num': 6,
+            'min_round_num': 11,
+        }
+    }
 }
 
 def gen_constants():

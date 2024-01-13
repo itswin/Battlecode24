@@ -32,6 +32,10 @@ public class Util {
 
     static final int RANDOM_EXPLORE_ROUNDS = 100;
 
+    static final int NEXT_BUILDER_MIN_ROUND = 500;
+    static final int NEXT_BUILDER_COOLDOWN = 200;
+    static final int NEXT_BUILDER_MIN_CRUMBS = 1500;
+
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
             Direction.NORTH,

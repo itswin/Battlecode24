@@ -1,6 +1,7 @@
 package MPWorking;
 
 import battlecode.common.*;
+import battlecode.server.GameMaker;
 import MPWorking.Comms.*;
 import MPWorking.Debug.*;
 import MPWorking.fast.*;
@@ -87,6 +88,7 @@ public class Duck extends Robot {
             case EXPLORING:
                 loadExploreTarget2();
                 doExplore();
+                considerTransformBuilder();
                 break;
             case CAPTURING_FLAG:
                 fillWater();
@@ -95,11 +97,29 @@ public class Duck extends Robot {
             case WAITING:
                 fillWater();
                 formHull();
+                considerTransformBuilder();
                 break;
         }
 
         if (shouldDoMicro && MicroDuck.apply())
             return;
+    }
+
+    public void considerTransformBuilder() throws GameActionException {
+        int minRound = Comms.readNextBuilderMinRoundNum();
+        if (rc.getRoundNum() < minRound)
+            return;
+
+        if (rc.getCrumbs() < Util.NEXT_BUILDER_MIN_CRUMBS)
+            return;
+
+        int nextBuilderUnitNum = Comms.readNextBuilderUnitNum();
+        if (nextBuilderUnitNum == unitNum) {
+            Robot.changeTo = new BuilderDuck(rc);
+            Comms.writeNextBuilderUnitNum(unitNum + 1);
+            Comms.writeNextBuilderMinRoundNum(rc.getRoundNum() + Util.NEXT_BUILDER_COOLDOWN);
+            Debug.println("Transforming to builder");
+        }
     }
 
     public boolean shouldWait() {

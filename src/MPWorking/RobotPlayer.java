@@ -52,12 +52,16 @@ public strictfp class RobotPlayer {
             case 12:
                 bot = new BuilderDuck(rc);
                 MicroDuck.canBuildTraps = true;
+                Comms.writeNextBuilderUnitNum(13);
+                Comms.writeNextBuilderMinRoundNum(Util.NEXT_BUILDER_MIN_ROUND);
                 break;
             default:
                 bot = new Duck(rc);
                 MicroDuck.canBuildTraps = false;
                 break;
         }
+
+        Robot.init(rc);
 
         while (true) {
             try {
@@ -67,6 +71,10 @@ public strictfp class RobotPlayer {
                 Debug.flush();
                 Clock.yield();
                 localResign();
+
+                if (Robot.changeTo != null) {
+                    bot = Robot.changeTo;
+                }
             } catch (Exception e) {
                 System.out.println("Exception. Round num: " + rc.getRoundNum());
                 e.printStackTrace();

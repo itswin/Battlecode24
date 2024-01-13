@@ -20,6 +20,7 @@ public class Comms {
     public final static int COMBAT_SECTOR_SLOTS = 4;
     public final static int EXPLORE_SECTOR_SLOTS = 13;
     public final static int SYMMETRY_SLOTS = 1;
+    public final static int NEXT_BUILDER_SLOTS = 1;
 
     // ControlStatus priorities are in increasing priority.
     public class ControlStatus {
@@ -3051,6 +3052,46 @@ public class Comms {
 
     public static void writeBPSymmetryAll(int value) throws GameActionException {
         writeToBufferPool(34, (bufferPool[34] & 64639) | (value << 7));
+    }
+
+    public static int readNextBuilderUnitNum() throws GameActionException {
+        return (rc.readSharedArray(34) & 126) >>> 1;
+    }
+
+    public static void writeNextBuilderUnitNum(int value) throws GameActionException {
+        rc.writeSharedArray(34, (rc.readSharedArray(34) & 65409) | (value << 1));
+    }
+
+    public static void writeBPNextBuilderUnitNum(int value) throws GameActionException {
+        writeToBufferPool(34, (bufferPool[34] & 65409) | (value << 1));
+    }
+
+    public static int readNextBuilderMinRoundNum() throws GameActionException {
+        return ((rc.readSharedArray(34) & 1) << 10) + ((rc.readSharedArray(35) & 65472) >>> 6);
+    }
+
+    public static void writeNextBuilderMinRoundNum(int value) throws GameActionException {
+        rc.writeSharedArray(34, (rc.readSharedArray(34) & 65534) | ((value & 1024) >>> 10));
+        rc.writeSharedArray(35, (rc.readSharedArray(35) & 63) | ((value & 1023) << 6));
+    }
+
+    public static void writeBPNextBuilderMinRoundNum(int value) throws GameActionException {
+        writeToBufferPool(34, (bufferPool[34] & 65534) | ((value & 1024) >>> 10));
+        writeToBufferPool(35, (bufferPool[35] & 63) | ((value & 1023) << 6));
+    }
+
+    public static int readNextBuilderAll() throws GameActionException {
+        return ((rc.readSharedArray(34) & 127) << 10) + ((rc.readSharedArray(35) & 65472) >>> 6);
+    }
+
+    public static void writeNextBuilderAll(int value) throws GameActionException {
+        rc.writeSharedArray(34, (rc.readSharedArray(34) & 65408) | ((value & 130048) >>> 10));
+        rc.writeSharedArray(35, (rc.readSharedArray(35) & 63) | ((value & 1023) << 6));
+    }
+
+    public static void writeBPNextBuilderAll(int value) throws GameActionException {
+        writeToBufferPool(34, (bufferPool[34] & 65408) | ((value & 130048) >>> 10));
+        writeToBufferPool(35, (bufferPool[35] & 63) | ((value & 1023) << 6));
     }
 
     // BUFFER POOL READ AND WRITE METHODS

@@ -87,7 +87,12 @@ public class Robot {
 
     static FastIntIntMap combatSectorToTurnWritten;
 
+    static Robot changeTo = null;
+
     public Robot(RobotController r) throws GameActionException {
+    }
+
+    public static void init(RobotController r) {
         rc = r;
         turnCount = 0;
         actionRadiusSquared = GameConstants.ATTACK_RADIUS_SQUARED;
@@ -609,7 +614,7 @@ public class Robot {
         Comms.flushBufferPool();
     }
 
-    public void setupSectors() {
+    public static void setupSectors() {
         sectorHeights = computeSectorSizes(Util.MAP_HEIGHT);
         sectorWidths = computeSectorSizes(Util.MAP_WIDTH);
         sectorWidthsLength = sectorWidths.length;
@@ -621,7 +626,7 @@ public class Robot {
     /**
      * Precompute x, y coordinates of centers of all sectors
      */
-    public void precomputeSectorCenters() {
+    public static void precomputeSectorCenters() {
         sectorCenters = new MapLocation[numSectors];
         int yCenter = 0;
         int i;
@@ -923,7 +928,7 @@ public class Robot {
         }
     }
 
-    public int[] computeSectorSizes(int dim) {
+    public static int[] computeSectorSizes(int dim) {
         switch (dim) {
             case 20:
                 return new int[] { 5, 5, 5, 5 };
@@ -1012,7 +1017,7 @@ public class Robot {
         }
     }
 
-    public int[] computeSectorCenters(int dim) {
+    public static int[] computeSectorCenters(int dim) {
         switch (dim) {
             case 20:
                 return new int[] { 2, 7, 12, 17 };
