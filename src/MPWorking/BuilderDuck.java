@@ -99,6 +99,9 @@ public class BuilderDuck extends Robot {
     }
 
     public TrapType pickTrapType(MapLocation loc) throws GameActionException {
+        if (rc.getRoundNum() < Util.ONLY_EXPLOSIVE_TRAPS_ROUNDS)
+            return TrapType.EXPLOSIVE;
+
         if (rc.getCrumbs() < MicroDuck.STUN_TRAP_COST)
             return null;
         if (rc.getCrumbs() < MicroDuck.EXPLOSIVE_TRAP_COST)

@@ -10,7 +10,8 @@ public class MicroDuck {
     static final int ACTION_RANGE_EXTENDED = 10;
     static final int STUN_BUILD_RANGE_EXTENDED = 13;
     static final int EXPLOSIVE_BUILD_RANGE_EXTENDED = 8;
-    static final int OVERWHELMING_RATIO = 4;
+    static final int ALLY_OVERWHELMING_RATIO = 4;
+    static final int ENEMY_OVERWHELMED_RATIO = 2;
     static final int TRAP_SENSE_RADIUS = 13;
 
     static int STUN_TRAP_COST;
@@ -51,9 +52,11 @@ public class MicroDuck {
     static RobotInfo currentUnit;
     static int numDucks;
     static boolean overwhelming;
+    static boolean overwhelmed;
     static boolean seesAllyFlagHolder;
     static boolean seesEnemyFlagHolder;
     static boolean appliedAttack;
+    static boolean inDanger;
 
     static float avgEnemyX;
     static float avgEnemyY;
@@ -126,9 +129,15 @@ public class MicroDuck {
         currentActionRadius = ACTION_RANGE;
         currentExtendedActionRadius = ACTION_RANGE_EXTENDED;
 
-        overwhelming = Robot.enemies.length * OVERWHELMING_RATIO <= Robot.allies.length;
+        overwhelming = Robot.enemies.length * ALLY_OVERWHELMING_RATIO <= Robot.allies.length;
         if (overwhelming) {
             Debug.printString("OVERWHELMING");
+        }
+
+        overwhelmed = Robot.allies.length * ENEMY_OVERWHELMED_RATIO <= Robot.enemies.length;
+        inDanger = rc.getHealth() < 400;
+        if (inDanger) {
+            Debug.printString("DANGER");
         }
 
         // boolean isThreatened = true;
@@ -500,12 +509,18 @@ public class MicroDuck {
                     // 2 * 150 / 800 / 20 = 0.009
                 }
 
+                // Reward possible crumb rewards
                 if (isEnemyTerritory)
                     damageScore *= 2;
 
                 // Kill flag holders
                 if (currentUnit.hasFlag)
                     damageScore += 10;
+
+                // Scale by level
+                int unitLevel = currentUnit.attackLevel + currentUnit.healLevel + currentUnit.buildLevel;
+                if (unitLevel > 0)
+                    damageScore *= 1 + unitLevel * 0.1;
 
                 if (damageScore > enemyDamageScore) {
                     enemyDamageScore = damageScore;
@@ -535,6 +550,12 @@ public class MicroDuck {
                     // Reward healing a unit with a flag.
                     if (currentUnit.hasFlag)
                         healScore += 10;
+
+                    // Scale by level
+                    int unitLevel = currentUnit.attackLevel + currentUnit.healLevel + currentUnit.buildLevel;
+                    if (unitLevel > 0)
+                        healScore *= 1 + unitLevel * 0.1;
+
                     if (healScore > allyHealScore) {
                         allyHealScore = healScore;
                         allyTarget = currentLoc;
@@ -613,10 +634,12 @@ public class MicroDuck {
                 if (ducksAttackRange > M.ducksAttackRange)
                     return false;
 
-                if (actionScore > M.actionScore)
-                    return true;
-                if (actionScore < M.actionScore)
-                    return false;
+                if (!inDanger) {
+                    if (actionScore > M.actionScore)
+                        return true;
+                    if (actionScore < M.actionScore)
+                        return false;
+                }
 
                 if (possibleEnemyDucks < M.possibleEnemyDucks)
                     return true;
@@ -628,15 +651,17 @@ public class MicroDuck {
                 if (minDistToAlly > M.minDistToAlly)
                     return false;
 
-                if (inRange())
+                if (inRange() || inDanger)
                     return minDistanceToEnemy >= M.minDistanceToEnemy;
                 else
                     return minDistanceToEnemy <= M.minDistanceToEnemy;
             } else {
-                if (actionScore > M.actionScore)
-                    return true;
-                if (actionScore < M.actionScore)
-                    return false;
+                if (!inDanger) {
+                    if (actionScore > M.actionScore)
+                        return true;
+                    if (actionScore < M.actionScore)
+                        return false;
+                }
 
                 // Go closer if we have a unit majority
                 return minDistanceToEnemy <= M.minDistanceToEnemy;
