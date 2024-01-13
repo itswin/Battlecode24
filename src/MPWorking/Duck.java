@@ -69,7 +69,8 @@ public class Duck extends Robot {
 
     public void doStateAction() throws GameActionException {
         // Do not do micro in setup
-        if (currState != State.SETUP && MicroDuck.doMicro())
+        boolean shouldDoMicro = currState != State.SETUP && currState != State.CAPTURING_FLAG;
+        if (shouldDoMicro && MicroDuck.doMicro())
             return;
 
         switch (currState) {
@@ -96,13 +97,13 @@ public class Duck extends Robot {
                 break;
         }
 
-        if (currState != State.SETUP && MicroDuck.apply())
+        if (shouldDoMicro && MicroDuck.apply())
             return;
     }
 
     public boolean shouldWait() {
         boolean tooSoon = turnSawLastClosestAttackingEnemy + WAITING_TIMEOUT >= rc.getRoundNum();
-        return tooSoon || !rc.isActionReady();
+        return false;
     }
 
     public void loadEnemyFlagTarget() throws GameActionException {

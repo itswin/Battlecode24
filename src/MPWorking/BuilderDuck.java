@@ -104,10 +104,10 @@ public class BuilderDuck extends Robot {
         if (rc.getCrumbs() < MicroDuck.EXPLOSIVE_TRAP_COST)
             return TrapType.STUN;
 
-        if (FastMath.rand256() % 2 == 0)
-            return TrapType.EXPLOSIVE;
-        else
+        if (FastMath.rand256() % 4 == 0)
             return TrapType.STUN;
+        else
+            return TrapType.EXPLOSIVE;
     }
 
     public void placeTrapNearDam() throws GameActionException {

@@ -378,7 +378,7 @@ public class MicroDuck {
     }
 
     static class MicroInfo {
-        static final float STUN_SCORE_PER_ENEMY = 0.1f;
+        static final float STUN_SCORE_PER_ENEMY = 0.05f;
 
         Direction dir;
         MapLocation location;
@@ -693,8 +693,8 @@ public class MicroDuck {
             for (Direction dirToTrap : Util.getInOrderDirectionsCenter(centralDir)) {
                 loc = rc.adjacentLocation(dirToTrap);
                 // TODO: OPTIMIZE
-                // if (Util.isAdjacentToTrap(loc))
-                // continue;
+                if (Util.isAdjacentToTrap(loc))
+                    continue;
 
                 if (rc.canBuild(TrapType.EXPLOSIVE, loc)) {
                     rc.build(TrapType.EXPLOSIVE, loc);
