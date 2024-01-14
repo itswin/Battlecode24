@@ -7,6 +7,7 @@ public class Debug {
     public static final boolean INFO = true;
     public static final boolean PATHFINDING = false;
     public static final boolean INDICATORS = true;
+    public static final boolean MICRO = false;
 
     private static RobotController rc;
 

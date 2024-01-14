@@ -124,7 +124,7 @@ def gen_bfs(radius):
         if (rc.onTheMap(l{encode(x,y)})) {{ // check ({x}, {y})"""
                     indent = ""
                     out += f"""
-            if (rc.canSenseLocation(l{encode(x,y)}) && rc.sensePassability(l{encode(x,y)}) && rc.senseRobotAtLocation(l{encode(x,y)}) == null) {{ """
+            if (rc.canSenseLocation(l{encode(x,y)}) && rc.sensePassability(l{encode(x,y)})) {{ """
                     indent = "    "
                     dxdy = [(dx, dy) for dx in range(-1, 2) for dy in range(-1, 2) if (dx, dy) != (0, 0) and dist(x+dx,y+dy) <= radius]
                     dxdy = sorted(dxdy, key=lambda dd: dist(x+dd[0], y+dd[1]))

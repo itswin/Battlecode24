@@ -376,7 +376,7 @@ public class BFS10 {
 
 
         if (rc.onTheMap(l111)) { // check (-1, 0)
-            if (rc.canSenseLocation(l111) && rc.sensePassability(l111) && rc.senseRobotAtLocation(l111) == null) { 
+            if (rc.canSenseLocation(l111) && rc.sensePassability(l111)) { 
                 if (d111 > d112) { // from (0, 0)
                     d111 = 0.4375;
                 }
@@ -385,7 +385,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l97)) { // check (0, -1)
-            if (rc.canSenseLocation(l97) && rc.sensePassability(l97) && rc.senseRobotAtLocation(l97) == null) { 
+            if (rc.canSenseLocation(l97) && rc.sensePassability(l97)) { 
                 if (d97 > d112) { // from (0, 0)
                     d97 = 0.5;
                 }
@@ -397,7 +397,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l127)) { // check (0, 1)
-            if (rc.canSenseLocation(l127) && rc.sensePassability(l127) && rc.senseRobotAtLocation(l127) == null) { 
+            if (rc.canSenseLocation(l127) && rc.sensePassability(l127)) { 
                 if (d127 > d112) { // from (0, 0)
                     d127 = 0.375;
                 }
@@ -409,7 +409,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l113)) { // check (1, 0)
-            if (rc.canSenseLocation(l113) && rc.sensePassability(l113) && rc.senseRobotAtLocation(l113) == null) { 
+            if (rc.canSenseLocation(l113) && rc.sensePassability(l113)) { 
                 if (d113 > d112) { // from (0, 0)
                     d113 = 0.3125;
                 }
@@ -424,7 +424,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l96)) { // check (-1, -1)
-            if (rc.canSenseLocation(l96) && rc.sensePassability(l96) && rc.senseRobotAtLocation(l96) == null) { 
+            if (rc.canSenseLocation(l96) && rc.sensePassability(l96)) { 
                 if (d96 > d112) { // from (0, 0)
                     d96 = 0.1875;
                 }
@@ -439,7 +439,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l126)) { // check (-1, 1)
-            if (rc.canSenseLocation(l126) && rc.sensePassability(l126) && rc.senseRobotAtLocation(l126) == null) { 
+            if (rc.canSenseLocation(l126) && rc.sensePassability(l126)) { 
                 if (d126 > d112) { // from (0, 0)
                     d126 = 0.125;
                 }
@@ -454,7 +454,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l98)) { // check (1, -1)
-            if (rc.canSenseLocation(l98) && rc.sensePassability(l98) && rc.senseRobotAtLocation(l98) == null) { 
+            if (rc.canSenseLocation(l98) && rc.sensePassability(l98)) { 
                 if (d98 > d112) { // from (0, 0)
                     d98 = 0.25;
                 }
@@ -469,7 +469,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l128)) { // check (1, 1)
-            if (rc.canSenseLocation(l128) && rc.sensePassability(l128) && rc.senseRobotAtLocation(l128) == null) { 
+            if (rc.canSenseLocation(l128) && rc.sensePassability(l128)) { 
                 if (d128 > d112) { // from (0, 0)
                     d128 = 0.0625;
                 }
@@ -484,7 +484,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l110)) { // check (-2, 0)
-            if (rc.canSenseLocation(l110) && rc.sensePassability(l110) && rc.senseRobotAtLocation(l110) == null) { 
+            if (rc.canSenseLocation(l110) && rc.sensePassability(l110)) { 
                 if (d110 > d111) { // from (-1, 0)
                     d110 = d111;
                 }
@@ -499,7 +499,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l82)) { // check (0, -2)
-            if (rc.canSenseLocation(l82) && rc.sensePassability(l82) && rc.senseRobotAtLocation(l82) == null) { 
+            if (rc.canSenseLocation(l82) && rc.sensePassability(l82)) { 
                 if (d82 > d97) { // from (0, -1)
                     d82 = d97;
                 }
@@ -514,7 +514,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l142)) { // check (0, 2)
-            if (rc.canSenseLocation(l142) && rc.sensePassability(l142) && rc.senseRobotAtLocation(l142) == null) { 
+            if (rc.canSenseLocation(l142) && rc.sensePassability(l142)) { 
                 if (d142 > d127) { // from (0, 1)
                     d142 = d127;
                 }
@@ -529,7 +529,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l114)) { // check (2, 0)
-            if (rc.canSenseLocation(l114) && rc.sensePassability(l114) && rc.senseRobotAtLocation(l114) == null) { 
+            if (rc.canSenseLocation(l114) && rc.sensePassability(l114)) { 
                 if (d114 > d113) { // from (1, 0)
                     d114 = d113;
                 }
@@ -544,7 +544,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l95)) { // check (-2, -1)
-            if (rc.canSenseLocation(l95) && rc.sensePassability(l95) && rc.senseRobotAtLocation(l95) == null) { 
+            if (rc.canSenseLocation(l95) && rc.sensePassability(l95)) { 
                 if (d95 > d111) { // from (-1, 0)
                     d95 = d111;
                 }
@@ -559,7 +559,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l125)) { // check (-2, 1)
-            if (rc.canSenseLocation(l125) && rc.sensePassability(l125) && rc.senseRobotAtLocation(l125) == null) { 
+            if (rc.canSenseLocation(l125) && rc.sensePassability(l125)) { 
                 if (d125 > d111) { // from (-1, 0)
                     d125 = d111;
                 }
@@ -574,7 +574,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l81)) { // check (-1, -2)
-            if (rc.canSenseLocation(l81) && rc.sensePassability(l81) && rc.senseRobotAtLocation(l81) == null) { 
+            if (rc.canSenseLocation(l81) && rc.sensePassability(l81)) { 
                 if (d81 > d97) { // from (0, -1)
                     d81 = d97;
                 }
@@ -592,7 +592,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l141)) { // check (-1, 2)
-            if (rc.canSenseLocation(l141) && rc.sensePassability(l141) && rc.senseRobotAtLocation(l141) == null) { 
+            if (rc.canSenseLocation(l141) && rc.sensePassability(l141)) { 
                 if (d141 > d127) { // from (0, 1)
                     d141 = d127;
                 }
@@ -610,7 +610,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l83)) { // check (1, -2)
-            if (rc.canSenseLocation(l83) && rc.sensePassability(l83) && rc.senseRobotAtLocation(l83) == null) { 
+            if (rc.canSenseLocation(l83) && rc.sensePassability(l83)) { 
                 if (d83 > d97) { // from (0, -1)
                     d83 = d97;
                 }
@@ -625,7 +625,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l143)) { // check (1, 2)
-            if (rc.canSenseLocation(l143) && rc.sensePassability(l143) && rc.senseRobotAtLocation(l143) == null) { 
+            if (rc.canSenseLocation(l143) && rc.sensePassability(l143)) { 
                 if (d143 > d127) { // from (0, 1)
                     d143 = d127;
                 }
@@ -640,7 +640,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l99)) { // check (2, -1)
-            if (rc.canSenseLocation(l99) && rc.sensePassability(l99) && rc.senseRobotAtLocation(l99) == null) { 
+            if (rc.canSenseLocation(l99) && rc.sensePassability(l99)) { 
                 if (d99 > d113) { // from (1, 0)
                     d99 = d113;
                 }
@@ -658,7 +658,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l129)) { // check (2, 1)
-            if (rc.canSenseLocation(l129) && rc.sensePassability(l129) && rc.senseRobotAtLocation(l129) == null) { 
+            if (rc.canSenseLocation(l129) && rc.sensePassability(l129)) { 
                 if (d129 > d113) { // from (1, 0)
                     d129 = d113;
                 }
@@ -676,7 +676,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l80)) { // check (-2, -2)
-            if (rc.canSenseLocation(l80) && rc.sensePassability(l80) && rc.senseRobotAtLocation(l80) == null) { 
+            if (rc.canSenseLocation(l80) && rc.sensePassability(l80)) { 
                 if (d80 > d96) { // from (-1, -1)
                     d80 = d96;
                 }
@@ -691,7 +691,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l140)) { // check (-2, 2)
-            if (rc.canSenseLocation(l140) && rc.sensePassability(l140) && rc.senseRobotAtLocation(l140) == null) { 
+            if (rc.canSenseLocation(l140) && rc.sensePassability(l140)) { 
                 if (d140 > d126) { // from (-1, 1)
                     d140 = d126;
                 }
@@ -706,7 +706,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l84)) { // check (2, -2)
-            if (rc.canSenseLocation(l84) && rc.sensePassability(l84) && rc.senseRobotAtLocation(l84) == null) { 
+            if (rc.canSenseLocation(l84) && rc.sensePassability(l84)) { 
                 if (d84 > d98) { // from (1, -1)
                     d84 = d98;
                 }
@@ -721,7 +721,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l144)) { // check (2, 2)
-            if (rc.canSenseLocation(l144) && rc.sensePassability(l144) && rc.senseRobotAtLocation(l144) == null) { 
+            if (rc.canSenseLocation(l144) && rc.sensePassability(l144)) { 
                 if (d144 > d128) { // from (1, 1)
                     d144 = d128;
                 }
@@ -736,7 +736,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l109)) { // check (-3, 0)
-            if (rc.canSenseLocation(l109) && rc.sensePassability(l109) && rc.senseRobotAtLocation(l109) == null) { 
+            if (rc.canSenseLocation(l109) && rc.sensePassability(l109)) { 
                 if (d109 > d110) { // from (-2, 0)
                     d109 = d110;
                 }
@@ -751,7 +751,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l67)) { // check (0, -3)
-            if (rc.canSenseLocation(l67) && rc.sensePassability(l67) && rc.senseRobotAtLocation(l67) == null) { 
+            if (rc.canSenseLocation(l67) && rc.sensePassability(l67)) { 
                 if (d67 > d82) { // from (0, -2)
                     d67 = d82;
                 }
@@ -766,7 +766,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l157)) { // check (0, 3)
-            if (rc.canSenseLocation(l157) && rc.sensePassability(l157) && rc.senseRobotAtLocation(l157) == null) { 
+            if (rc.canSenseLocation(l157) && rc.sensePassability(l157)) { 
                 if (d157 > d142) { // from (0, 2)
                     d157 = d142;
                 }
@@ -781,7 +781,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l115)) { // check (3, 0)
-            if (rc.canSenseLocation(l115) && rc.sensePassability(l115) && rc.senseRobotAtLocation(l115) == null) { 
+            if (rc.canSenseLocation(l115) && rc.sensePassability(l115)) { 
                 if (d115 > d114) { // from (2, 0)
                     d115 = d114;
                 }
@@ -796,7 +796,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l94)) { // check (-3, -1)
-            if (rc.canSenseLocation(l94) && rc.sensePassability(l94) && rc.senseRobotAtLocation(l94) == null) { 
+            if (rc.canSenseLocation(l94) && rc.sensePassability(l94)) { 
                 if (d94 > d110) { // from (-2, 0)
                     d94 = d110;
                 }
@@ -814,7 +814,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l124)) { // check (-3, 1)
-            if (rc.canSenseLocation(l124) && rc.sensePassability(l124) && rc.senseRobotAtLocation(l124) == null) { 
+            if (rc.canSenseLocation(l124) && rc.sensePassability(l124)) { 
                 if (d124 > d110) { // from (-2, 0)
                     d124 = d110;
                 }
@@ -832,7 +832,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l66)) { // check (-1, -3)
-            if (rc.canSenseLocation(l66) && rc.sensePassability(l66) && rc.senseRobotAtLocation(l66) == null) { 
+            if (rc.canSenseLocation(l66) && rc.sensePassability(l66)) { 
                 if (d66 > d82) { // from (0, -2)
                     d66 = d82;
                 }
@@ -850,7 +850,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l156)) { // check (-1, 3)
-            if (rc.canSenseLocation(l156) && rc.sensePassability(l156) && rc.senseRobotAtLocation(l156) == null) { 
+            if (rc.canSenseLocation(l156) && rc.sensePassability(l156)) { 
                 if (d156 > d142) { // from (0, 2)
                     d156 = d142;
                 }
@@ -868,7 +868,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l68)) { // check (1, -3)
-            if (rc.canSenseLocation(l68) && rc.sensePassability(l68) && rc.senseRobotAtLocation(l68) == null) { 
+            if (rc.canSenseLocation(l68) && rc.sensePassability(l68)) { 
                 if (d68 > d82) { // from (0, -2)
                     d68 = d82;
                 }
@@ -886,7 +886,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l158)) { // check (1, 3)
-            if (rc.canSenseLocation(l158) && rc.sensePassability(l158) && rc.senseRobotAtLocation(l158) == null) { 
+            if (rc.canSenseLocation(l158) && rc.sensePassability(l158)) { 
                 if (d158 > d142) { // from (0, 2)
                     d158 = d142;
                 }
@@ -904,7 +904,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l100)) { // check (3, -1)
-            if (rc.canSenseLocation(l100) && rc.sensePassability(l100) && rc.senseRobotAtLocation(l100) == null) { 
+            if (rc.canSenseLocation(l100) && rc.sensePassability(l100)) { 
                 if (d100 > d114) { // from (2, 0)
                     d100 = d114;
                 }
@@ -922,7 +922,7 @@ public class BFS10 {
         }
 
         if (rc.onTheMap(l130)) { // check (3, 1)
-            if (rc.canSenseLocation(l130) && rc.sensePassability(l130) && rc.senseRobotAtLocation(l130) == null) { 
+            if (rc.canSenseLocation(l130) && rc.sensePassability(l130)) { 
                 if (d130 > d114) { // from (2, 0)
                     d130 = d114;
                 }

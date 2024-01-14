@@ -101,9 +101,6 @@ public class Robot {
         team = rc.getTeam();
         opponent = team.opponent();
 
-        // TODO
-        home = rc.getLocation();
-
         // homeIdx = 0;
         // for (int i = 0; i < 4; i++) {
         // if (Comms.readOurHqLocation(i).equals(home)) {
@@ -165,6 +162,7 @@ public class Robot {
                 rc.spawn(spawnLoc);
                 if (!spawned) {
                     spawned = true;
+                    home = rc.getLocation();
                     Explore.init(rc);
                     Explore.assignExplore3Dir(Explore.EXPLORE_DIRECTIONS[unitNum % Explore.EXPLORE_DIRECTIONS.length]);
                     writeFlagLocs();
@@ -1926,38 +1924,40 @@ public class Robot {
         MapLocation crumb = findCrumbs();
         if (lastClosestEnemy != null
                 && turnSawLastClosestAttackingEnemy + LAST_ATTACKING_ENEMY_TIMEOUT >= rc.getRoundNum()) {
-            // && friendlyAttackingHealth >= lastEnemyAttackingHealth) {
-            if (rc.getRoundNum() >= Util.EARLY_BACKOFF_ROUND_MIN && rc.getRoundNum() <= Util.EARLY_BACKOFF_ROUND_MAX) {
-                MapLocation closestTrap = null;
-                int closestDist = Integer.MAX_VALUE;
-                int dist;
-                MapInfo[] infos = rc.senseNearbyMapInfos(rc.getLocation(), MicroDuck.TRAP_SENSE_RADIUS);
-                MapInfo info;
-                for (int i = infos.length; --i >= 0;) {
-                    info = infos[i];
-                    if (info.getTrapType() != TrapType.NONE) {
-                        dist = info.getMapLocation().distanceSquaredTo(lastClosestEnemy);
-                        if (dist < closestDist) {
-                            closestDist = dist;
-                            closestTrap = info.getMapLocation();
-                        }
-                    }
-                }
+            // if (rc.getRoundNum() >= Util.EARLY_BACKOFF_ROUND_MIN && rc.getRoundNum() <=
+            // Util.EARLY_BACKOFF_ROUND_MAX) {
+            // MapLocation closestTrap = null;
+            // int closestDist = Integer.MAX_VALUE;
+            // int dist;
+            // MapInfo[] infos = rc.senseNearbyMapInfos(rc.getLocation(),
+            // MicroDuck.TRAP_SENSE_RADIUS);
+            // MapInfo info;
+            // for (int i = infos.length; --i >= 0;) {
+            // info = infos[i];
+            // if (info.getTrapType() != TrapType.NONE) {
+            // dist = info.getMapLocation().distanceSquaredTo(lastClosestEnemy);
+            // if (dist < closestDist) {
+            // closestDist = dist;
+            // closestTrap = info.getMapLocation();
+            // }
+            // }
+            // }
 
-                if (closestTrap != null) {
-                    float dx = lastClosestEnemy.x - closestTrap.x;
-                    float dy = lastClosestEnemy.y - closestTrap.y;
-                    MapLocation behindTrapLoc = new MapLocation((int) (closestTrap.x - dx), (int) (closestTrap.y - dy));
-                    target = behindTrapLoc;
-                    Debug.printString("BackOff");
-                } else {
-                    target = lastClosestEnemy;
-                    Debug.printString("LastEnemy");
-                }
-            } else {
-                target = lastClosestEnemy;
-                Debug.printString("LastEnemy");
-            }
+            // if (closestTrap != null) {
+            // float dx = lastClosestEnemy.x - closestTrap.x;
+            // float dy = lastClosestEnemy.y - closestTrap.y;
+            // MapLocation behindTrapLoc = new MapLocation((int) (closestTrap.x - dx), (int)
+            // (closestTrap.y - dy));
+            // target = behindTrapLoc;
+            // Debug.printString("BackOff");
+            // } else {
+            // target = lastClosestEnemy;
+            // Debug.printString("LastEnemy");
+            // }
+            // } else {
+            target = lastClosestEnemy;
+            Debug.printString("LastEnemy");
+            // }
         } else if (crumb != null) {
             Debug.printString("Crumb");
             target = crumb;

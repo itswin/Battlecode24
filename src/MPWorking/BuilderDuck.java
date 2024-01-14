@@ -10,7 +10,6 @@ public class BuilderDuck extends Robot {
     static enum State {
         SETUP,
         EXPLORING,
-        WAITING,
     };
 
     MapLocation target;
@@ -42,14 +41,6 @@ public class BuilderDuck extends Robot {
                     currState = State.EXPLORING;
                 break;
             case EXPLORING:
-                if (shouldWait()) {
-                    currState = State.WAITING;
-                }
-                break;
-            case WAITING:
-                if (!shouldWait()) {
-                    currState = State.EXPLORING;
-                }
                 break;
         }
     }
@@ -82,10 +73,6 @@ public class BuilderDuck extends Robot {
 
                 if (rc.getLevel(SkillType.BUILD) == 6)
                     placeRandomTrap();
-                break;
-            case WAITING:
-                fillWater();
-                formHull();
                 break;
         }
 

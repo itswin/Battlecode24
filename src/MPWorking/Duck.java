@@ -12,7 +12,6 @@ public class Duck extends Robot {
         SETUP,
         EXPLORING,
         CAPTURING_FLAG,
-        WAITING,
     };
 
     MapLocation target;
@@ -49,19 +48,12 @@ public class Duck extends Robot {
                     currState = State.EXPLORING;
                 break;
             case EXPLORING:
-                if (shouldWait()) {
-                    currState = State.WAITING;
-                } else if (enemyFlagLoc != null) {
+                 if (enemyFlagLoc != null) {
                     currState = State.CAPTURING_FLAG;
                 }
                 break;
             case CAPTURING_FLAG:
                 if (enemyFlagLoc == null && !rc.hasFlag()) {
-                    currState = State.EXPLORING;
-                }
-                break;
-            case WAITING:
-                if (!shouldWait()) {
                     currState = State.EXPLORING;
                 }
                 break;
@@ -93,11 +85,6 @@ public class Duck extends Robot {
             case CAPTURING_FLAG:
                 fillWater();
                 doCapture();
-                break;
-            case WAITING:
-                fillWater();
-                formHull();
-                considerTransformBuilder();
                 break;
         }
 

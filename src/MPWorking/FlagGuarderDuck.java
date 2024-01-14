@@ -124,6 +124,9 @@ public class FlagGuarderDuck extends Robot {
     }
 
     public void tryBuildTrap() throws GameActionException {
+        if (enemies.length == 0)
+            return;
+
         MapLocation[] locs = {
                 homeFlag.add(Direction.NORTHEAST),
                 homeFlag.add(Direction.WEST),

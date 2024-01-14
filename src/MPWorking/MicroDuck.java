@@ -33,7 +33,7 @@ public class MicroDuck {
 
     static RobotController rc;
 
-    static int id = 14026;
+    static int id = 11931;
 
     static void init(RobotController r) {
         rc = r;
@@ -135,7 +135,7 @@ public class MicroDuck {
         }
 
         overwhelmed = Robot.allies.length * ENEMY_OVERWHELMED_RATIO <= Robot.enemies.length;
-        inDanger = rc.getHealth() < 400;
+        inDanger = rc.getHealth() <= 400;
         if (inDanger) {
             Debug.printString("DANGER");
         }
@@ -237,6 +237,12 @@ public class MicroDuck {
             microInfo[i].loadActionScore();
         }
 
+        if (Debug.MICRO) {
+            for (i = 9; --i >= 0;) {
+                Debug.println(microInfo[i].toString(), id);
+            }
+        }
+
         if (Robot.enemies.length == 0 && !seesAllyFlagHolder) {
             // No enemies. Just apply the zero micro's attack.
             applyAttack(microInfo[8]);
@@ -262,7 +268,7 @@ public class MicroDuck {
             }
         }
 
-        // alwaysInRange = !canAttack || numDucks >= 2;
+        alwaysInRange = !canAttack || inDanger;
 
         i = 8;
         for (; --i >= 0;) {
@@ -270,8 +276,12 @@ public class MicroDuck {
                 bestMicro = microInfo[i];
         }
 
+        if (Debug.MICRO) {
+            Debug.println("BestMicro: " + bestMicro.toString(), id);
+        }
+
         // If you have no action score, what you even doing here
-        if (bestMicro.actionScore == 0 && !(seesAllyFlagHolder || seesEnemyFlagHolder)) {
+        if (bestMicro.actionScore == 0 && !(seesAllyFlagHolder || seesEnemyFlagHolder || Robot.enemies.length != 0)) {
             // If the chosen micro has no action score, but the zero micro does,
             // apply the zero micro's attack.
             if (microInfo[8].actionScore > 0) {
@@ -340,6 +350,7 @@ public class MicroDuck {
 
         if (rc.canMove(bestMicro.dir)) {
             rc.move(bestMicro.dir);
+            // Debug.println("M: " + bestMicro.dir, id);
             applyAttack(bestMicro);
             return true;
         }
@@ -394,6 +405,7 @@ public class MicroDuck {
         MapInfo info;
         boolean isEnemyTerritory;
         int minDistanceToEnemy = INF;
+        int distToHome;
 
         // These are AOE and are summed over all enemies.
         float enemyStunScore = 0;
@@ -408,6 +420,7 @@ public class MicroDuck {
         float enemyDamageScore = 0;
         float allyHealScore = 0;
         int ducksAttackRange = 0;
+        int possibleHealingDucks = 0;
         int possibleEnemyDucks = 0;
         int minDistToAlly = INF;
         MapLocation enemyTarget = null;
@@ -428,6 +441,7 @@ public class MicroDuck {
             location = rc.adjacentLocation(dir);
             if (dir != Direction.CENTER && !rc.canMove(dir))
                 canMove = false;
+            distToHome = location.distanceSquaredTo(Robot.home);
 
             if (rc.onTheMap(location)) {
                 try {
@@ -448,8 +462,8 @@ public class MicroDuck {
                     + "(ducksAttackRange," + ducksAttackRange + ") " + "(possibleEnemyDucks," + possibleEnemyDucks
                     + ") " + "(minDistToAlly," + minDistToAlly + ") " + "(canMove," + canMove + ") " + "(isSupported,"
                     + isSupported + ") " + "(distToAllyFlagHolder," + distToAllyFlagHolder + ") "
-                    + "(distToEnemyFlagHolder," + distToEnemyFlagHolder + ") " + "(actionScore," + actionScore + ") "
-                    + "(distToBehindTrap," + distToBehindTrap + ")";
+                    + "(distToEnemyFlagHolder," + distToEnemyFlagHolder + ") " + "(distToBehindTrap," + distToBehindTrap
+                    + ")";
         }
 
         void updateEnemy() {
@@ -510,8 +524,8 @@ public class MicroDuck {
                 }
 
                 // Reward possible crumb rewards
-                if (isEnemyTerritory)
-                    damageScore *= 2;
+                // if (isEnemyTerritory)
+                // damageScore *= 2;
 
                 // Kill flag holders
                 if (currentUnit.hasFlag)
@@ -537,6 +551,8 @@ public class MicroDuck {
             int dist = currentLoc.distanceSquaredTo(location);
             if (dist < minDistToAlly)
                 minDistToAlly = dist;
+            if (dist <= ACTION_RANGE)
+                possibleHealingDucks++;
             isSupported = true;
             if (dist <= ACTION_RANGE && canAttack) {
                 // Calculate score based on percent healed over current health
@@ -579,6 +595,16 @@ public class MicroDuck {
             dangerScore += possibleEnemyDucks * DAMAGE / SkillType.ATTACK.cooldown / 2;
         }
 
+        int safe() {
+            if (!canMove)
+                return -1;
+            if (ducksAttackRange > 0)
+                return 0;
+            if (possibleEnemyDucks > possibleHealingDucks)
+                return 1;
+            return 2;
+        }
+
         // equal => true
         boolean isBetter(MicroInfo M) {
             if (canMove && !M.canMove)
@@ -594,7 +620,7 @@ public class MicroDuck {
             // INF;
             boolean neitherAllyInf = distToAllyFlagHolder != INF && M.distToAllyFlagHolder != INF;
             // assert bothInf || neitherAllyInf;
-            if (neitherAllyInf) {
+            if (neitherAllyInf && (Robot.allies.length < 8 || Robot.enemies.length > 0)) {
                 boolean lessEqual2 = distToAllyFlagHolder <= 2;
                 boolean otherLessEqual2 = M.distToAllyFlagHolder <= 2;
                 // If both are lessEqual2, ignore this check.
@@ -611,11 +637,6 @@ public class MicroDuck {
                 }
             }
 
-            // boolean bothInf = distToEnemyFlagHolder == INF && M.distToEnemyFlagHolder ==
-            // INF;
-            // boolean neitherEnemyInf = distToEnemyFlagHolder != INF &&
-            // M.distToEnemyFlagHolder != INF;
-            // assert bothInf || neitherEnemyInf;
             if (distToEnemyFlagHolder < M.distToEnemyFlagHolder)
                 return true;
             if (distToEnemyFlagHolder > M.distToEnemyFlagHolder)
@@ -628,6 +649,16 @@ public class MicroDuck {
                 // if (distToBehindTrap > M.distToBehindTrap)
                 // return false;
                 // }
+
+                if (safe() > M.safe())
+                    return true;
+                if (safe() < M.safe())
+                    return false;
+
+                if (inRange() && !M.inRange())
+                    return false;
+                if (!inRange() && M.inRange())
+                    return true;
 
                 if (ducksAttackRange < M.ducksAttackRange)
                     return true;
@@ -646,15 +677,16 @@ public class MicroDuck {
                 if (possibleEnemyDucks > M.possibleEnemyDucks)
                     return false;
 
-                if (minDistToAlly < M.minDistToAlly)
-                    return true;
-                if (minDistToAlly > M.minDistToAlly)
-                    return false;
+                // if (minDistToAlly < M.minDistToAlly)
+                // return true;
+                // if (minDistToAlly > M.minDistToAlly)
+                // return false;
 
-                if (inRange() || inDanger)
+                if (inRange()) {
                     return minDistanceToEnemy >= M.minDistanceToEnemy;
-                else
+                } else {
                     return minDistanceToEnemy <= M.minDistanceToEnemy;
+                }
             } else {
                 if (!inDanger) {
                     if (actionScore > M.actionScore)
