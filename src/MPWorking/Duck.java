@@ -48,7 +48,7 @@ public class Duck extends Robot {
                     currState = State.EXPLORING;
                 break;
             case EXPLORING:
-                 if (enemyFlagLoc != null) {
+                if (enemyFlagLoc != null) {
                     currState = State.CAPTURING_FLAG;
                 }
                 break;
@@ -74,7 +74,8 @@ public class Duck extends Robot {
                     loadExploreTarget2();
                 }
 
-                fillWater();
+                if (rc.getRoundNum() > Util.DUCK_FILL_WATER_ROUND)
+                    fillWater();
                 doExplore();
                 break;
             case EXPLORING:

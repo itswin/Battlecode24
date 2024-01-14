@@ -58,7 +58,7 @@ public class FlagGuarderDuck extends Robot {
     public void trySwitchState() throws GameActionException {
         switch (currState) {
             case SETUP:
-                if (rc.getRoundNum() > GameConstants.SETUP_ROUNDS - 20)
+                if (rc.getRoundNum() > GameConstants.SETUP_ROUNDS)
                     currState = State.GUARDING;
                 break;
             case GUARDING:
@@ -86,7 +86,11 @@ public class FlagGuarderDuck extends Robot {
                 }
 
                 fillWater();
-                doExplore();
+                if (rc.getRoundNum() > GameConstants.SETUP_ROUNDS - 20) {
+                    doGuard();
+                } else {
+                    doExplore();
+                }
                 break;
             case GUARDING:
                 doGuard();
@@ -99,6 +103,12 @@ public class FlagGuarderDuck extends Robot {
     }
 
     public boolean lookForFlag() throws GameActionException {
+        // If you can't see the flag, assume it is there.
+        if (rc.getLocation().distanceSquaredTo(homeFlag) >= 20) {
+            lastTurnSeenFlag = rc.getRoundNum();
+            return true;
+        }
+
         FlagInfo[] flags = rc.senseNearbyFlags(visionRadiusSquared, team);
         for (FlagInfo flag : flags) {
             if (flag.getLocation().equals(homeFlag)) {

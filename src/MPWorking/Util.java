@@ -40,6 +40,8 @@ public class Util {
     static final int EARLY_BACKOFF_ROUND_MIN = 190;
     static final int EARLY_BACKOFF_ROUND_MAX = 210;
 
+    static final int DUCK_FILL_WATER_ROUND = 125;
+
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
             Direction.NORTH,
@@ -471,5 +473,14 @@ public class Util {
                 return true;
         }
         return false;
+    }
+
+    public static boolean isEvenLoc(MapLocation loc) {
+        return (loc.x + loc.y) % 2 == 0;
+    }
+
+    public static boolean isTrapLoc(MapLocation loc) throws GameActionException {
+        // return isEvenLoc(loc);
+        return !isAdjacentToTrap(loc);
     }
 }

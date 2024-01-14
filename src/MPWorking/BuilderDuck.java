@@ -113,7 +113,7 @@ public class BuilderDuck extends Robot {
                     TrapType trapType = pickTrapType(locCandidate);
                     if (trapType != null
                             && rc.canBuild(trapType, locCandidate)
-                            && !Util.isAdjacentToTrap(locCandidate)) {
+                            && Util.isTrapLoc(locCandidate)) {
                         rc.build(trapType, locCandidate);
                         return;
                     }
@@ -127,7 +127,7 @@ public class BuilderDuck extends Robot {
         MapLocation prevLoc = rc.getLocation();
         TrapType trapType = pickTrapType(prevLoc);
         if (trapType != null && rc.canBuild(trapType, prevLoc) && FastMath.nextInt(256) % 37 == 1
-                && !Util.isAdjacentToTrap(prevLoc))
+                && Util.isTrapLoc(prevLoc))
             rc.build(trapType, prevLoc);
     }
 
