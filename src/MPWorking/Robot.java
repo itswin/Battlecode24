@@ -236,10 +236,12 @@ public class Robot {
             return getRandomSpawnLoc();
         }
 
+        double reciprocalSum = 1.0f / dist1 + 1.0f / dist2 + 1.0f / dist3;
+        double rand = Math.random();
         MapLocation spawnLocCenter = null;
-        if (dist1 <= dist2 && dist1 <= dist3) {
+        if (rand < 1.0f / dist1 / reciprocalSum) {
             spawnLocCenter = spawnLocations[0];
-        } else if (dist2 <= dist1 && dist2 <= dist3) {
+        } else if (rand < (1.0f / dist1 + 1.0f / dist2) / reciprocalSum) {
             spawnLocCenter = spawnLocations[1];
         } else {
             spawnLocCenter = spawnLocations[2];

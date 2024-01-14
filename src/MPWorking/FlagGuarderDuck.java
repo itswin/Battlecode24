@@ -90,6 +90,7 @@ public class FlagGuarderDuck extends Robot {
                 break;
             case GUARDING:
                 doGuard();
+                tryBuildTrap();
                 break;
         }
 
@@ -120,5 +121,25 @@ public class FlagGuarderDuck extends Robot {
         Nav.move(exploreTarget, true);
         turnsFollowedExploreTarget++;
         tryAttackBestEnemy();
+    }
+
+    public void tryBuildTrap() throws GameActionException {
+        MapLocation[] locs = {
+                homeFlag.add(Direction.NORTHEAST),
+                homeFlag.add(Direction.WEST),
+                homeFlag.add(Direction.SOUTHEAST),
+        };
+
+        for (MapLocation loc : locs) {
+            if (rc.canSenseLocation(loc)) {
+                MapInfo info = rc.senseMapInfo(loc);
+                if (info.getTrapType() == TrapType.NONE) {
+                    if (rc.canBuild(TrapType.STUN, loc)) {
+                        rc.build(TrapType.STUN, loc);
+                        return;
+                    }
+                }
+            }
+        }
     }
 }
