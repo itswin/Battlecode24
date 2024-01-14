@@ -58,6 +58,7 @@ public class Robot {
     static FastLocSet seenSymmetricLocs;
     static boolean goingToSymLoc;
     static MapLocation exploreTarget;
+    static boolean isExploreTargetCombat;
 
     static int turnsFollowedExploreTarget = 0;
     static int EXPLORE_TARGET_TIMEOUT = GameConstants.GAME_MAX_NUMBER_OF_ROUNDS;
@@ -491,6 +492,10 @@ public class Robot {
                 Comms.readOurFlagLocation(1),
                 Comms.readOurFlagLocation(2),
         };
+
+        seenSymmetricLocs.add(spawnLocations[0]);
+        seenSymmetricLocs.add(spawnLocations[1]);
+        seenSymmetricLocs.add(spawnLocations[2]);
     }
 
     /*
@@ -1907,6 +1912,7 @@ public class Robot {
     public void loadExploreTarget2() throws GameActionException {
         MapLocation target;
         goingToSymLoc = false;
+        isExploreTargetCombat = false;
         MapLocation symLoc = chooseSymmetricLoc();
         MapLocation combatSector = null;
 
@@ -1916,14 +1922,43 @@ public class Robot {
         }
 
         MapLocation crumb = findCrumbs();
-        if (crumb != null) {
-            Debug.printString("Crumb");
-            target = crumb;
-        } else if (lastClosestEnemy != null
+        if (lastClosestEnemy != null
                 && turnSawLastClosestAttackingEnemy + LAST_ATTACKING_ENEMY_TIMEOUT >= rc.getRoundNum()) {
             // && friendlyAttackingHealth >= lastEnemyAttackingHealth) {
-            Debug.printString("LastEnemy");
-            target = lastClosestEnemy;
+            if (rc.getRoundNum() >= Util.EARLY_BACKOFF_ROUND_MIN && rc.getRoundNum() <= Util.EARLY_BACKOFF_ROUND_MAX) {
+                MapLocation closestTrap = null;
+                int closestDist = Integer.MAX_VALUE;
+                int dist;
+                MapInfo[] infos = rc.senseNearbyMapInfos(rc.getLocation(), MicroDuck.TRAP_SENSE_RADIUS);
+                MapInfo info;
+                for (int i = infos.length; --i >= 0;) {
+                    info = infos[i];
+                    if (info.getTrapType() != TrapType.NONE) {
+                        dist = info.getMapLocation().distanceSquaredTo(lastClosestEnemy);
+                        if (dist < closestDist) {
+                            closestDist = dist;
+                            closestTrap = info.getMapLocation();
+                        }
+                    }
+                }
+
+                if (closestTrap != null) {
+                    float dx = lastClosestEnemy.x - closestTrap.x;
+                    float dy = lastClosestEnemy.y - closestTrap.y;
+                    MapLocation behindTrapLoc = new MapLocation((int) (closestTrap.x - dx), (int) (closestTrap.y - dy));
+                    target = behindTrapLoc;
+                    Debug.printString("BackOff");
+                } else {
+                    target = lastClosestEnemy;
+                    Debug.printString("LastEnemy");
+                }
+            } else {
+                target = lastClosestEnemy;
+                Debug.printString("LastEnemy");
+            }
+        } else if (crumb != null) {
+            Debug.printString("Crumb");
+            target = crumb;
         } else if (combatSector != null && symLoc != null) {
             int combSecDist = Util.manhattan(currLoc, combatSector);
             int symLocDist = Util.manhattan(currLoc, symLoc);
@@ -1935,6 +1970,7 @@ public class Robot {
                     controlStatus == Comms.ControlStatus.ENEMY;
             if (protect || (closeToHQ && protectFromEnemy)) {
                 target = combatSector;
+                isExploreTargetCombat = true;
                 Debug.printString("PrefCombSec");
             } else {
                 target = symLoc;
@@ -1944,6 +1980,7 @@ public class Robot {
             }
         } else if (combatSector != null) {
             target = combatSector;
+            isExploreTargetCombat = true;
             Debug.printString("CombSec");
         } else if (symLoc != null) {
             target = symLoc;

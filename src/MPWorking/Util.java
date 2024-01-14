@@ -37,6 +37,8 @@ public class Util {
     static final int NEXT_BUILDER_MIN_CRUMBS = 1500;
 
     static final int ONLY_EXPLOSIVE_TRAPS_ROUNDS = 175;
+    static final int EARLY_BACKOFF_ROUND_MIN = 190;
+    static final int EARLY_BACKOFF_ROUND_MAX = 210;
 
     /** Array containing all the possible movement directions. */
     static final Direction[] directions = {
@@ -335,7 +337,7 @@ public class Util {
                 return newDir;
             } else if (ignoreWater) {
                 MapLocation adjLoc = rc.adjacentLocation(dir);
-                if (rc.senseMapInfo(adjLoc).isWater()) {
+                if (rc.canSenseLocation(adjLoc) && rc.senseMapInfo(adjLoc).isWater()) {
                     return newDir;
                 }
             }
